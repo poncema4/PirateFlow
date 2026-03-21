@@ -45,7 +45,7 @@ sudo apt install python3 python3-pip python3-full
 
 ### 3. Clone the repo
 ```bash
-git clone https://github.com/your-repo/SHU-Hackathon-2026.git
+git clone https://github.com/poncema4/SHU-Hackathon-2026.git
 cd SHU-Hackathon-2026/hackathon-template
 ```
 
