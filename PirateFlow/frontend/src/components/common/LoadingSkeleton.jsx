@@ -17,9 +17,9 @@ function SkeletonBox({ width = "100%", height = 20, rounded = 8, className = "" 
 
 export function StatsCardSkeleton() {
   return (
-    <div className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-      <SkeletonBox width="60%" height={12} />
-      <SkeletonBox width="40%" height={36} />
+    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+      <SkeletonBox width="60%" height={10} />
+      <SkeletonBox width="40%" height={28} />
       <SkeletonBox width="50%" height={10} />
     </div>
   );
@@ -27,7 +27,7 @@ export function StatsCardSkeleton() {
 
 export function BuildingCardSkeleton() {
   return (
-    <div className="rounded-xl p-5 flex flex-col gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
       <div className="flex justify-between">
         <div className="flex flex-col gap-2">
           <SkeletonBox width={120} height={14} />
@@ -35,13 +35,13 @@ export function BuildingCardSkeleton() {
         </div>
         <SkeletonBox width={50} height={20} rounded={20} />
       </div>
-      <SkeletonBox width="100%" height={6} rounded={4} />
-      <SkeletonBox width="60%" height={12} />
+      <SkeletonBox width="100%" height={5} rounded={4} />
+      <SkeletonBox width="60%" height={10} />
     </div>
   );
 }
 
-export function ChartSkeleton({ height = 260 }) {
+export function ChartSkeleton({ height = 240 }) {
   return (
     <div className="rounded-xl p-5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
       <SkeletonBox width="30%" height={14} className="mb-4" />
@@ -73,13 +73,3 @@ export default function LoadingSkeleton({ type = "chart", ...props }) {
   if (type === "table") return <TableSkeleton {...props} />;
   return <ChartSkeleton {...props} />;
 }
-
-// Inject shimmer keyframes once
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-`;
-document.head.appendChild(style);

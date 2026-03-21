@@ -110,6 +110,10 @@ class LoginResponse(BaseModel):
     user: UserOut
 
 
+class StudentLookupRequest(BaseModel):
+    student_id: str
+
+
 # ---------------------------------------------------------------------------
 # Buildings & Floors
 # ---------------------------------------------------------------------------
