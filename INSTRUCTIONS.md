@@ -1,4 +1,4 @@
-# SHU Hackathon 2026 — Setup Guide
+# PirateFlow - Setup Guide
 
 Get the project running on your machine in ~10 minutes
 
@@ -45,12 +45,13 @@ sudo apt install python3 python3-pip python3-full
 
 ### 3. Clone the repo
 ```bash
-git clone https://github.com/poncema4/SHU-Hackathon-2026.git
-cd SHU-Hackathon-2026/hackathon-template
+git clone https://github.com/poncema4/PirateFlow.git
+cd PirateFlow/PirateFlow
 ```
 
 ### 4. Install frontend dependencies
 ```bash
+cd frontend
 npm install
 npm install axios
 npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
@@ -60,6 +61,7 @@ npm install -D tailwindcss postcss autoprefixer @tailwindcss/vite
 
 **Windows:**
 ```bash
+cd backend
 pip install flask flask-cors
 ```
 
@@ -67,6 +69,7 @@ pip install flask flask-cors
 ```bash
 python3 -m venv venv
 source venv/bin/activate
+cd backend
 pip install flask flask-cors
 ```
 
@@ -87,12 +90,14 @@ You need **two terminals open at the same time**, one for the frontend, one for 
 
 **Windows:**
 ```bash
+cd backend
 python app.py
 ```
 
 **Ubuntu/Linux:**
 ```bash
 source venv/bin/activate
+cd backend
 python3 app.py
 ```
 
@@ -100,6 +105,7 @@ Backend runs on **http://localhost:5000**
 
 ### Terminal 2: Start the React frontend
 ```bash
+cd frontend
 npm run dev
 ```
 
