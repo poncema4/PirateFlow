@@ -1,25 +1,26 @@
 # Server Infrastructure
 
-This document describes the team's deployment server in full detail. It is written for both humans and AI assistants (Claude, ChatGPT, Copilot, etc.) to have complete context about the server's architecture, capabilities, and constraints. Read this before writing any deployment, networking, infrastructure, or DevOps code.
+This document describes the deployment server for PirateFlow in full detail. It is written for both humans and AI assistants (Claude, ChatGPT, Copilot, etc.) to have complete context about the server's architecture, capabilities, and constraints. Read this before writing any deployment, networking, infrastructure, or DevOps code.
 
 ---
 
 ## Hardware
 
-**Device:** Raspberry Pi 5
-**RAM:** 16GB
-**Storage:** MicroSD card, ~114GB total
-**Architecture:** ARM64 (aarch64)
-**OS:** Raspberry Pi OS Lite (based on Debian Trixie/13, 64-bit, headless -- no desktop environment)
-**Kernel:** Linux 6.12.x (RPi custom)
+**Device:** Lenovo ThinkCentre M710q (mini desktop)
+**CPU:** Intel Core i5-7500T @ 2.70GHz, 4 cores, 4 threads (no hyperthreading)
+**RAM:** 16GB DDR4
+**Storage:** 233GB NVMe SSD (`/dev/nvme0n1p2`)
+**Architecture:** x86_64
+**OS:** Ubuntu 24.04.4 LTS (Noble Numbat)
+**Kernel:** Linux 6.17.0-14-generic
 
-The Pi runs headless with no monitor, keyboard, or mouse attached. All access is remote via SSH through a Cloudflare Tunnel. The Pi connects to the internet via WiFi.
+The server runs headless with no monitor, keyboard, or mouse attached. All access is remote via SSH through a Cloudflare Tunnel. The machine connects to the local network via WiFi.
 
 **Performance characteristics:**
-- 4-core ARM Cortex-A76 @ 2.4GHz. Adequate for web servers, API backends, and moderate Docker workloads.
-- 16GB RAM is generous for a single-app hackathon server. Multiple large containers or memory-intensive processes (ML models, large builds) should be monitored with `free -h` and `htop`.
-- MicroSD storage is the bottleneck. Sequential reads ~100MB/s, writes ~30-50MB/s. Random I/O is slow. Avoid high-frequency disk writes (chatty logging, unoptimized databases). Log rotation is configured.
-- The SD card has limited write endurance. Don't run databases with heavy write loads directly on the SD card for extended periods. SQLite is fine for a hackathon. PostgreSQL is fine for light use. If you need heavy database writes, consider using tmpfs or an external USB SSD.
+- 4-core Kaby Lake i5 at 2.7GHz. More than adequate for web servers, API backends, Docker workloads, and moderate build tasks. Significantly faster than a Raspberry Pi for compilation and I/O.
+- 16GB RAM provides comfortable headroom for running multiple Docker containers, Node.js processes, and Python backends concurrently. Monitor with `free -h` and `htop` if adding memory-intensive services.
+- NVMe SSD eliminates the I/O bottleneck of SD card storage. Sequential reads exceed 1GB/s, random I/O is fast. No write endurance concerns for typical server workloads including databases, logging, and frequent deploys.
+- The machine draws roughly 35W at idle, making it suitable for always-on operation.
 
 ---
 
@@ -27,12 +28,12 @@ The Pi runs headless with no monitor, keyboard, or mouse attached. All access is
 
 ### Cloudflare Tunnel
 
-The Pi is exposed to the internet through a Cloudflare Tunnel (formerly Argo Tunnel). This is the core of the networking setup and understanding it is important.
+The server is exposed to the internet through a Cloudflare Tunnel (formerly Argo Tunnel). This is the core of the networking setup and understanding it is important.
 
 **How it works:**
-1. The `cloudflared` daemon on the Pi maintains persistent outbound connections to Cloudflare's edge network.
-2. When a request comes in for a subdomain of `lodgepi.com`, Cloudflare routes it through the tunnel to the Pi.
-3. The Pi receives the request as plain HTTP on localhost. Cloudflare handles TLS termination.
+1. The `cloudflared` daemon on the server maintains persistent outbound connections to Cloudflare's edge network.
+2. When a request comes in for a configured hostname, Cloudflare routes it through the tunnel to the server.
+3. The server receives the request as plain HTTP on localhost. Cloudflare handles TLS termination.
 4. Responses travel back through the tunnel to the client.
 
 **Why this matters for your code:**
@@ -40,48 +41,53 @@ The Pi is exposed to the internet through a Cloudflare Tunnel (formerly Argo Tun
 - The `X-Forwarded-For` header contains the real client IP. Your app sees `127.0.0.1` as the source.
 - Cloudflare adds headers like `CF-Connecting-IP`, `CF-RAY`, and `CF-IPCountry` that your app can read.
 - WebSocket connections work through the tunnel.
-- The tunnel is outbound-only. No ports are opened on the Pi. No firewall rules needed. It works behind any NAT or WiFi network.
+- The tunnel is outbound-only. No ports are opened on the server's firewall. No port forwarding is needed on the router. It works behind any NAT or WiFi network.
 
 **Latency:**
-- Round-trip through the tunnel is typically 80-130ms from the US East Coast.
+- Round-trip through the tunnel is typically 20-80ms from the US East Coast.
 - First request after idle may spike to 500ms+ (tunnel connection warm-up).
 - Subsequent requests are fast once the connection is warm.
-- The Pi connects to Cloudflare's nearest edge (typically `ewr` Newark or `iad` DC from New Jersey).
+- The server connects to Cloudflare's nearest edge (typically `ewr` Newark or `iad` DC from New Jersey).
 
-### Domain and DNS
+### Domains and DNS
 
-**Domain:** `lodgepi.com` (registered on Squarespace, nameservers pointed to Cloudflare)
+Two domains are used for PirateFlow:
 
-**DNS is managed in the Cloudflare dashboard**, not on the Pi or on Squarespace. All DNS records for `lodgepi.com` are CNAME records pointing to the tunnel.
+**Domain:** `pirateflow.net` (nameservers pointed to Cloudflare)
+**Domain:** `benkosiek.com` (nameservers pointed to Cloudflare)
 
-| Subdomain | Routes To | Port | Purpose |
+DNS is managed in the Cloudflare dashboard, not on the server. All DNS records are CNAME records pointing to the tunnel.
+
+| Hostname | Routes To | Port | Purpose |
 |---|---|---|---|
-| `ssh.lodgepi.com` | SSH | 22 | Remote shell access via `cloudflared` proxy |
-| `deploy.lodgepi.com` | HTTP | 9000 | GitHub webhook listener for auto-deploy |
+| `pirateflow.net` | HTTP | 5173 | Frontend (Vite preview) |
+| `www.pirateflow.net` | HTTP | 5173 | Frontend (Vite preview) |
+| `api.pirateflow.net` | HTTP | 5000 | Backend (FastAPI/uvicorn) |
+| `deploy-pirateflow.benkosiek.com` | HTTP | 9002 | GitHub webhook listener for auto-deploy |
+| `ssh.benkosiek.com` | SSH | 22 | Remote shell access via `cloudflared` proxy |
+| `logs.benkosiek.com` | HTTP | 9999 | Dozzle (real-time container logs) |
+| `npm.benkosiek.com` | HTTP | 81 | Nginx Proxy Manager admin |
+| `admin.benkosiek.com` | HTTP | 9090 | Admin panel |
+| `benkosiek.com` | HTTP | 80 | Portfolio / main site |
 
-**There is no A record or direct IP.** All access goes through Cloudflare's proxy. The Pi's actual IP is not publicly known or reachable.
+There is no A record or direct IP. All access goes through Cloudflare's proxy. The server's actual IP is not publicly known or reachable.
 
 ### Tunnel Configuration
 
-The tunnel config lives at `/etc/cloudflared/config.yml`:
+There are two tunnel config files on this server. The `cloudflared` systemd service uses the one in `/etc/cloudflared/`:
 
-```yaml
-tunnel: e8673a06-1ebf-4540-89a5-9ccb77c22389
-credentials-file: /etc/cloudflared/e8673a06-1ebf-4540-89a5-9ccb77c22389.json
+**Active config (used by systemd):** `/etc/cloudflared/config.yml`
+**User config (not used by systemd):** `/home/benkosiek/.cloudflared/config.yml`
 
-ingress:
-  - hostname: deploy.lodgepi.com
-    service: http://localhost:9000
-  - hostname: ssh.lodgepi.com
-    service: ssh://localhost:22
-  - service: http_status:404
-```
+When editing tunnel routes, make sure you edit `/etc/cloudflared/config.yml` since that is what the running `cloudflared` service reads. The user-level config at `~/.cloudflared/config.yml` is only used when running `cloudflared` manually from the command line.
+
+**Tunnel ID:** `b5031382-bc55-4d99-bf6f-8235be571a4d`
 
 The `ingress` rules are evaluated top-to-bottom. The final `http_status:404` is a catch-all required by cloudflared.
 
-**Tunnel ID:** `e8673a06-1ebf-4540-89a5-9ccb77c22389`
+When adding new public hostnames, a CNAME record must be added in the Cloudflare DNS dashboard pointing to `b5031382-bc55-4d99-bf6f-8235be571a4d.cfargotunnel.com`.
 
-When adding new public subdomains, a CNAME record must point to `e8673a06-1ebf-4540-89a5-9ccb77c22389.cfargotunnel.com` in the Cloudflare DNS dashboard.
+After editing the config, restart the tunnel: `sudo systemctl restart cloudflared`
 
 ---
 
@@ -89,22 +95,20 @@ When adding new public subdomains, a CNAME record must point to `e8673a06-1ebf-4
 
 ### SSH Access
 
-Only one person (Gonzei) has SSH access. Teammates do not connect to the server directly. All code reaches the server through the CI/CD pipeline (push to GitHub -> auto-deploy).
-
 SSH is accessed through the Cloudflare Tunnel using `cloudflared` as a proxy. The SSH config on the client machine looks like:
 
 ```
-Host pilab
-    HostName ssh.lodgepi.com
-    User gonzei
+Host server
+    HostName ssh.benkosiek.com
+    User benkosiek
     IdentityFile ~/.ssh/id_ed25519
     IdentitiesOnly yes
-    ProxyCommand "C:\Program Files (x86)\cloudflared\cloudflared.exe" access ssh --hostname %h
+    ProxyCommand cloudflared access ssh --hostname %h
 ```
 
-**Authentication:** SSH key only (Ed25519). Password auth works but key auth is primary.
+On Windows, the ProxyCommand path may need to be the full path to `cloudflared.exe`.
 
-**VS Code Remote SSH:** Works through the tunnel with one required setting in VS Code:
+**VS Code Remote SSH** works through the tunnel with one required setting:
 ```json
 "remote.SSH.enableDynamicForwarding": false
 ```
@@ -112,14 +116,37 @@ Without this, VS Code's dynamic port forwarding conflicts with Cloudflare's SSH 
 
 ### User Account
 
-**Username:** `gonzei`
-**Hostname:** `pilab`
+**Username:** `benkosiek`
+**Hostname:** `benkosiek-ThinkCentre-M710q`
 **Shell:** bash
-**Home directory:** `/home/gonzei/`
+**Home directory:** `/home/benkosiek/`
 **Sudo:** yes (with password)
 **Docker group:** yes (can run Docker without sudo)
 
-There is only one user account on the system. No other users exist. The `gonzei` user owns all application files, deploy scripts, and logs.
+---
+
+## PirateFlow Application
+
+PirateFlow consists of two services: a Python/FastAPI backend and a Vite/React frontend.
+
+### Backend
+
+- **Location:** `/home/benkosiek/server/pirateflow/PirateFlow/backend/`
+- **Runtime:** Python 3.12, FastAPI, uvicorn
+- **Port:** 5000
+- **Virtual environment:** `./venv/`
+- **Entry point:** `main:app` (uvicorn ASGI)
+- **Public URL:** `https://api.pirateflow.net`
+
+### Frontend
+
+- **Location:** `/home/benkosiek/server/pirateflow/PirateFlow/frontend/`
+- **Runtime:** Node.js 22, Vite, React
+- **Port:** 5173
+- **Mode:** `vite preview` (serves pre-built production bundle from `dist/`)
+- **Public URL:** `https://pirateflow.net`
+
+The frontend is built with `npm run build` during deploy, which outputs to `dist/`. The `vite preview` command serves this built output as a static production server.
 
 ---
 
@@ -133,7 +160,7 @@ The deployment pipeline is fully automatic. No one needs to SSH into the server 
 Developer pushes to main on GitHub
         |
         v
-GitHub sends POST to https://deploy.lodgepi.com
+GitHub sends POST to https://deploy-pirateflow.benkosiek.com
         |
         v
 webhook.py verifies HMAC-SHA256 signature
@@ -142,26 +169,26 @@ webhook.py verifies HMAC-SHA256 signature
 webhook.py runs deploy.sh in a background thread
         |
         v
-deploy.sh: git pull -> detect stack -> install deps -> restart service
+deploy.sh: git pull -> pip install -> npm ci -> npm build -> restart services
 ```
 
-### Webhook Listener (`~/deploy/webhook.py`)
+### Webhook Listener (`~/deploy-pirateflow/webhook.py`)
 
-A standalone Python HTTP server (standard library only, no pip dependencies) running on port 9000. It runs as a systemd service called `webhook`.
+A standalone Python HTTP server (standard library only, no pip dependencies) running on port 9002. It runs as a systemd service called `pirateflow-webhook`.
 
 **What it does:**
 - Listens for POST requests from GitHub
 - Verifies the request signature using HMAC-SHA256 with a shared secret
 - Only processes `push` events targeting `refs/heads/main`
 - Ignores pushes to other branches
-- Responds to `ping` events (sent when the webhook is first configured)
+- Responds to `ping` events (sent when the webhook is first configured on GitHub)
 - Runs the deploy in a background thread so GitHub gets an immediate 200 response
 
 **Concurrent push safety:**
-The webhook uses a `DeployQueue` class with threading locks. If a deploy is already running and another push comes in, it does NOT start a second deploy. Instead it flags a "pending" redeploy. When the current deploy finishes, it checks the flag and runs one more deploy. Multiple pushes during a single deploy collapse into one redeploy because `git pull` always fetches the latest state. This prevents race conditions like `git reset --hard` happening while `npm install` is running.
+The webhook uses a `DeployQueue` class with threading locks. If a deploy is already running and another push comes in, it does not start a second deploy. Instead it flags a "pending" redeploy. When the current deploy finishes, it checks the flag and runs one more deploy. Multiple pushes during a single deploy collapse into one redeploy because `git pull` always fetches the latest state. This prevents race conditions like `git reset --hard` happening while `npm install` is running.
 
 **Health check / status:**
-A GET request to `https://deploy.lodgepi.com/` returns JSON:
+A GET request to `https://deploy-pirateflow.benkosiek.com/` returns JSON:
 ```json
 {
   "status": "running",
@@ -174,37 +201,44 @@ A GET request to `https://deploy.lodgepi.com/` returns JSON:
 ```
 
 **Secret:**
-The HMAC secret is stored in `~/deploy/.webhook_secret` (file permissions 600, readable only by `gonzei`). The same secret is configured in the GitHub webhook settings. If you ever need to recreate the webhook on GitHub, the secret must match this file.
+The HMAC secret is stored in `~/deploy-pirateflow/.webhook_secret` (file permissions 600, readable only by `benkosiek`). The same secret is configured in the GitHub webhook settings. If you ever need to recreate the webhook on GitHub, the secret must match this file.
 
-### Deploy Script (`~/deploy/deploy.sh`)
+### Deploy Script (`~/deploy-pirateflow/deploy.sh`)
 
-A bash script that handles the actual deployment logic. It is stack-agnostic and auto-detects what kind of project it's deploying.
+A bash script that handles the actual deployment logic.
 
 **Step 1: Pull latest code**
 ```bash
+cd /home/benkosiek/server/pirateflow
 git fetch origin main
 git reset --hard origin/main
 ```
 This is a hard reset, not a merge. Whatever is on `origin/main` becomes the deployed code. Local changes on the server (if any) are discarded.
 
-**Step 2: Detect stack and install dependencies**
+**Step 2: Install backend dependencies**
+```bash
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+```
+Creates a virtual environment if one does not exist.
 
-Detection priority (first match wins):
+**Step 3: Install frontend dependencies and build**
+```bash
+cd frontend
+npm ci
+npm run build
+```
+`npm ci` does a clean install from the lockfile (faster and deterministic). `npm run build` produces the production bundle in `dist/`.
 
-| File Found | Stack | Action |
-|---|---|---|
-| `docker-compose.yml` or `docker-compose.yaml` | Docker Compose | `docker compose -p pilab up -d --build` |
-| `Dockerfile` | Docker | Build image, stop/remove old container, start new one on port 8080 |
-| `requirements.txt` | Python | Create venv if missing, `pip install -r requirements.txt` |
-| `package.json` | Node.js | `npm ci` (if lockfile exists) or `npm install`, then `npm run build` if build script exists |
-| None of the above | Unknown | Just pull code, no dependency install |
-
-**Step 3: Restart the application**
-
-For non-Docker stacks, the script runs `sudo systemctl restart app`. The `app` service is a systemd unit that will be created once the team decides on a stack and entrypoint. For Docker stacks, Docker itself manages the container lifecycle.
+**Step 4: Restart services**
+```bash
+sudo systemctl restart pirateflow-backend
+sudo systemctl restart pirateflow-frontend
+```
 
 **Logging:**
-Every step is logged with timestamps to both stdout (captured by systemd journal) and `/var/log/pilab/deploy.log`. Git output, pip/npm output, and Docker output are all captured. If a deploy fails, the logs show exactly where it broke.
+Every step is logged with timestamps to both stdout (captured by systemd journal) and `/var/log/pirateflow/deploy.log`.
 
 **Timeout:**
 The deploy script has a 300-second (5 minute) timeout enforced by the webhook listener. If a deploy takes longer than that, it is killed.
@@ -213,10 +247,11 @@ The deploy script has a 300-second (5 minute) timeout enforced by the webhook li
 
 The webhook is configured in the GitHub repo settings (Settings -> Webhooks):
 
-- **Payload URL:** `https://deploy.lodgepi.com`
+- **Payload URL:** `https://deploy-pirateflow.benkosiek.com`
 - **Content type:** `application/json`
-- **Secret:** (matches `~/deploy/.webhook_secret` on the Pi)
+- **Secret:** (matches `~/deploy-pirateflow/.webhook_secret` on the server)
 - **Events:** Just the push event
+- **SSL verification:** enabled (Cloudflare handles the certificate)
 - **Active:** yes
 
 The repo owner (poncema4) manages the webhook settings since admin access is required.
@@ -225,127 +260,62 @@ The repo owner (poncema4) manages the webhook settings since admin access is req
 
 ## Installed Software
 
-Everything below is pre-installed and ready to use. No setup required on hackathon day.
-
 ### Runtimes and Languages
 
 | Tool | Version | Install Source | Binary Location |
 |---|---|---|---|
-| Python | 3.13.5 | System (Debian) | `/usr/bin/python3` |
-| Node.js | 24.14.0 | NodeSource | `/usr/local/bin/node` |
-| npm | 11.9.0 | Bundled with Node.js | `/usr/local/bin/npm` |
-| Docker | 29.3.0 | Docker official repo | `/usr/bin/docker` |
-| Docker Compose | 5.1.1 | Docker CLI plugin | `docker compose` (not `docker-compose`) |
+| Python | 3.12.3 | System (Ubuntu) | `/usr/bin/python3` |
+| Node.js | 22.22.0 | nvm | `/home/benkosiek/.nvm/versions/node/v22.22.1/bin/node` |
+| npm | 10.9.4 | Bundled with Node.js | `/home/benkosiek/.nvm/versions/node/v22.22.1/bin/npm` |
+| Docker | 29.2.1 | Docker official repo | `/usr/bin/docker` |
+| Docker Compose | 5.0.2 | Docker CLI plugin | `docker compose` (not `docker-compose`) |
+| cloudflared | 2026.2.0 | Cloudflare | `/usr/local/bin/cloudflared` |
+| git | 2.43.0 | System (Ubuntu) | `/usr/bin/git` |
 
 **Python notes:**
 - `pip` is available as `pip3` or `python3 -m pip`
 - `venv` is available: `python3 -m venv myenv`
-- Dev headers and `libffi-dev` are installed for compiling native extensions (e.g., `cryptography`, `psycopg2`)
-- The deploy script auto-creates a venv in the app directory if `requirements.txt` exists
+- The deploy script auto-creates a venv in the backend directory if `requirements.txt` exists
 
 **Node.js notes:**
-- Installed from NodeSource, NOT the Debian package. This gives us a current LTS version instead of the older Debian-packaged one.
-- Global npm packages install to `/usr/local/lib/node_modules/`
+- Installed via nvm, not the system package. The nvm path must be included in systemd service `Environment` directives or the node/npm binaries will not be found.
 - The deploy script runs `npm ci` if `package-lock.json` exists (faster, deterministic), otherwise `npm install`
 - If `package.json` contains a `"build"` script, `npm run build` is run automatically after install
 
 **Docker notes:**
-- The `gonzei` user is in the `docker` group and can run Docker commands without sudo
+- The `benkosiek` user is in the `docker` group and can run Docker commands without sudo
 - Docker Compose v2 syntax: use `docker compose` (space), not `docker-compose` (hyphen)
-- Images must support `linux/arm64`. Most official images (node, python, postgres, redis, nginx) support ARM64. If using a niche image, check its platform support on Docker Hub.
-- Docker data lives at `/var/lib/docker/`. Large images and volumes consume SD card space.
-
-### Databases and Services
-
-| Service | Version | Default State | Enable Command | Port |
-|---|---|---|---|---|
-| PostgreSQL | 17.9 | disabled, stopped | `sudo systemctl enable --now postgresql` | 5432 |
-| Redis | 8.0.2 | disabled, stopped | `sudo systemctl enable --now redis-server` | 6379 |
-| Nginx | 1.26.3 | disabled, stopped | `sudo systemctl enable --now nginx` | 80 |
-| SQLite | 3.46.1 | always available | N/A (no service, file-based) | N/A |
-
-These services are deliberately disabled to save RAM and CPU. Only enable what the project needs.
-
-**PostgreSQL notes:**
-- Default cluster: `17/main`
-- Connect as postgres superuser: `sudo -u postgres psql`
-- Create a database: `sudo -u postgres createdb myapp`
-- Create a user: `sudo -u postgres createuser --pwprompt myuser`
-- Config: `/etc/postgresql/17/main/postgresql.conf`
-- Data: `/var/lib/postgresql/17/main/`
-
-**Redis notes:**
-- Config: `/etc/redis/redis.conf`
-- Test: `redis-cli ping` (should return `PONG`)
-- Default: no password, localhost only
-
-**Nginx notes:**
-- Config: `/etc/nginx/nginx.conf` and `/etc/nginx/sites-enabled/`
-- Useful as a reverse proxy if the app needs to serve static files alongside an API
-- Not needed if using Cloudflare Tunnel directly to the app port
-
-**SQLite notes:**
-- No service to manage. Just point your app at a `.db` file.
-- Good for hackathon projects that don't need concurrent writes from multiple processes.
-- CLI: `sqlite3 myapp.db`
-
-### Build Tools and Utilities
-
-| Tool | Purpose |
-|---|---|
-| `build-essential` | gcc, g++, make -- needed for native npm/pip packages |
-| `libffi-dev` | Foreign function interface -- needed by Python's `cryptography` and `cffi` packages |
-| `libssl-dev` | OpenSSL headers -- needed for packages that do TLS |
-| `python3-dev` | Python C API headers -- needed for compiled Python extensions |
-| `git` | Version control, used by deploy script |
-| `curl`, `wget` | HTTP clients for scripts |
+- Docker data lives at `/var/lib/docker/`
 
 ---
 
-## File Structure
+## Docker Services
 
-```
-/home/gonzei/
-├── app/                          # The repo clone. deploy.sh pulls into here.
-│   ├── SERVER.md                 # This file
-│   └── (repo contents)
-│
-├── deploy/
-│   ├── webhook.py                # GitHub webhook listener (systemd: webhook)
-│   ├── deploy.sh                 # Deploy script (called by webhook.py)
-│   └── .webhook_secret           # HMAC secret (chmod 600)
-│
-└── .ssh/
-    ├── config                    # SSH client config (GitHub deploy key routing)
-    ├── deploy_key                # Ed25519 private key for GitHub repo access
-    ├── deploy_key.pub            # Public key (added to repo as deploy key)
-    └── authorized_keys           # Gonzei's public key for SSH login
+The following containers run via Docker Compose from `/home/benkosiek/server/docker-compose.yml`:
 
-/etc/cloudflared/
-├── config.yml                    # Tunnel ingress routing rules
-└── e8673a06-....json             # Tunnel credentials (do not share)
+| Container | Image | Ports | Purpose |
+|---|---|---|---|
+| `nginx-proxy-manager` | jc21/nginx-proxy-manager | 80, 81, 443 | Reverse proxy for portfolio and project subdomains |
+| `portfolio` | Custom build (`./portfolio`) | 80 (internal) | Main portfolio website |
+| `dozzle` | amir20/dozzle | 9999->8080 | Real-time Docker container log viewer |
+| `server-bot` | Custom build (`./discord-bot`) | none | Discord bot for remote server management |
+| `tenantdesk-postgres` | PostgreSQL | 5432 | TenantDesk database |
+| `tenantdesk-redis` | Redis | 6379 | TenantDesk cache |
+| `tenantdesk-minio` | MinIO | 9000-9001 | TenantDesk object storage |
 
-/etc/systemd/system/
-├── webhook.service               # Webhook listener service definition
-└── (app.service)                 # Created when stack is decided
-
-/var/log/pilab/
-├── webhook.log                   # Webhook listener activity log
-└── deploy.log                    # Deploy script output log
-```
+Note: MinIO occupies ports 9000 (API) and 9001 (console). The PirateFlow webhook was moved to port 9002 to avoid this conflict.
 
 ---
 
 ## Systemd Services
 
-| Service | Unit File | Purpose | Auto-Start on Boot | Restart Policy |
+| Service | Unit File | Purpose | Auto-Start | Restart Policy |
 |---|---|---|---|---|
-| `cloudflared` | `/etc/systemd/system/cloudflared.service` | Cloudflare Tunnel | yes | always |
-| `webhook` | `/etc/systemd/system/webhook.service` | GitHub webhook listener | yes | always (3s delay) |
-| `app` | `/etc/systemd/system/app.service` | Project application | TBD | TBD |
-| `postgresql` | system-provided | PostgreSQL database | no (disabled) | on-failure |
-| `redis-server` | system-provided | Redis in-memory store | no (disabled) | on-failure |
-| `nginx` | system-provided | Reverse proxy / static server | no (disabled) | on-failure |
+| `cloudflared` | `/etc/systemd/system/cloudflared.service` | Cloudflare Tunnel | yes | on-failure (5s delay) |
+| `pirateflow-backend` | `/etc/systemd/system/pirateflow-backend.service` | FastAPI backend on port 5000 | yes | always (3s delay) |
+| `pirateflow-frontend` | `/etc/systemd/system/pirateflow-frontend.service` | Vite preview on port 5173 | yes | always (3s delay) |
+| `pirateflow-webhook` | `/etc/systemd/system/pirateflow-webhook.service` | GitHub webhook listener on port 9002 | yes | always (3s delay) |
+| `docker` | system-provided | Docker daemon | yes | on-failure |
 
 **Useful commands:**
 ```bash
@@ -362,151 +332,166 @@ journalctl -u <service> --since "1h ago" # Logs from last hour
 
 ---
 
+## File Structure
+
+```
+/home/benkosiek/
+├── server/
+│   ├── docker-compose.yml               # Docker Compose for portfolio, NPM, dozzle, bot
+│   ├── pirateflow/
+│   │   ├── PirateFlow/                  # Git repo clone
+│   │   │   ├── backend/
+│   │   │   │   ├── main.py              # FastAPI application
+│   │   │   │   ├── requirements.txt
+│   │   │   │   └── venv/               # Python virtual environment
+│   │   │   └── frontend/
+│   │   │       ├── src/                 # React source code
+│   │   │       ├── dist/                # Built production bundle
+│   │   │       ├── package.json
+│   │   │       └── vite.config.js
+│   │   ├── SERVER.md                    # This file
+│   │   └── README.md
+│   ├── portfolio/                       # Portfolio site (Docker build)
+│   ├── discord-bot/                     # Discord bot (Docker build)
+│   ├── nginx-proxy-manager/             # NPM config and data
+│   └── tenantdesk/                      # TenantDesk project
+│
+├── deploy-pirateflow/
+│   ├── webhook.py                       # GitHub webhook listener (systemd: pirateflow-webhook)
+│   ├── deploy.sh                        # Deploy script (called by webhook.py)
+│   └── .webhook_secret                  # HMAC secret (chmod 600)
+│
+└── .cloudflared/
+    ├── config.yml                       # User-level tunnel config (NOT used by systemd)
+    └── b5031382-....json                # Tunnel credentials
+
+/etc/cloudflared/
+├── config.yml                           # Active tunnel config (USED by systemd service)
+└── b5031382-....json                    # Tunnel credentials
+
+/etc/systemd/system/
+├── cloudflared.service
+├── pirateflow-backend.service
+├── pirateflow-frontend.service
+└── pirateflow-webhook.service
+
+/var/log/pirateflow/
+├── webhook.log                          # Webhook listener activity log
+└── deploy.log                           # Deploy script output log
+```
+
+---
+
 ## Logs
 
 | Log | Location | What It Captures |
 |---|---|---|
-| Webhook activity | `/var/log/pilab/webhook.log` | Incoming requests, signature verification, deploy triggers |
-| Deploy output | `/var/log/pilab/deploy.log` | Git pull output, dependency install output, service restart results |
-| App logs | `journalctl -u app` | Application stdout/stderr (once app service exists) |
+| Webhook activity | `/var/log/pirateflow/webhook.log` | Incoming requests, signature verification, deploy triggers |
+| Deploy output | `/var/log/pirateflow/deploy.log` | Git pull output, dependency install output, service restart results |
+| Backend logs | `journalctl -u pirateflow-backend` | Uvicorn/FastAPI stdout/stderr |
+| Frontend logs | `journalctl -u pirateflow-frontend` | Vite preview stdout/stderr |
 | Tunnel logs | `journalctl -u cloudflared` | Tunnel connection status, reconnections, errors |
+| Docker logs | `docker logs <container>` or Dozzle at `logs.benkosiek.com` | Container stdout/stderr |
 | System logs | `journalctl` | Everything else |
 
-Logs are rotated weekly (4 weeks retained, compressed) via `/etc/logrotate.d/pilab`.
+---
+
+## Port Map
+
+| Port | Process | Purpose |
+|---|---|---|
+| 22 | sshd | SSH access |
+| 80 | Nginx Proxy Manager | HTTP traffic for portfolio/projects |
+| 81 | Nginx Proxy Manager | NPM admin interface |
+| 443 | Nginx Proxy Manager | HTTPS traffic |
+| 5000 | uvicorn | PirateFlow backend (FastAPI) |
+| 5173 | node (vite) | PirateFlow frontend (Vite preview) |
+| 5432 | Docker (postgres) | TenantDesk PostgreSQL |
+| 6379 | Docker (redis) | TenantDesk Redis |
+| 9000 | Docker (minio) | TenantDesk MinIO API |
+| 9001 | Docker (minio) | TenantDesk MinIO console |
+| 9002 | python3 (webhook.py) | PirateFlow deploy webhook |
+| 9090 | cockpit/admin | Admin panel |
+| 9999 | Docker (dozzle) | Container log viewer |
 
 ---
 
 ## Constraints and Gotchas
 
-### Architecture
-- **ARM64 only.** All Docker images must support `linux/arm64`. Check Docker Hub for platform support before using any image. Most official images (node, python, postgres, redis, nginx, alpine) support ARM64. Some community images do not.
-- If a Docker build fails with `exec format error`, the image or a base image does not support ARM64.
+### Two Tunnel Config Files
 
-### Storage
-- **SD card is the only storage.** ~114GB total, some used by the OS and installed packages.
-- SD cards have limited write endurance. Avoid patterns that write to disk continuously (e.g., logging every request to a file without rotation, database WAL files on busy apps).
-- Check available space: `df -h /`
-- Docker images and volumes live at `/var/lib/docker/` and can grow quickly. Clean up unused images: `docker system prune -a`
-
-### Memory
-- **16GB RAM.** Check usage: `free -h` or `htop`
-- Docker containers, Node.js, and PostgreSQL can each use significant memory. Monitor if running multiple services.
-- If the Pi runs out of memory, the OOM killer will terminate processes unpredictably. Set memory limits on Docker containers if running multiple.
+This is the most common source of confusion on this server. The `cloudflared` systemd service reads from `/etc/cloudflared/config.yml`. The file at `~/.cloudflared/config.yml` is only used when running `cloudflared` manually from the terminal. If you edit the wrong file, your changes will not take effect. Always edit `/etc/cloudflared/config.yml` and then run `sudo systemctl restart cloudflared`.
 
 ### Networking
-- **All HTTP traffic is proxied through Cloudflare.** Your app sees requests from `127.0.0.1`. Use `X-Forwarded-For` or `CF-Connecting-IP` for the real client IP.
-- **Cloudflare terminates TLS.** Your app serves plain HTTP on localhost. Do not set up TLS certificates on the app.
-- **WebSockets work** through the tunnel. No special configuration needed.
-- **Maximum upload size:** Cloudflare free plan limits request bodies to 100MB. If your app needs to receive larger files, this is a hard limit.
-- **Request timeout:** Cloudflare has a 100-second timeout for HTTP responses. Long-running requests (large file processing, slow API calls) may be cut off. Use background processing for heavy tasks.
-- **Cold start latency:** If the tunnel is idle, the first request may take 500ms+. Subsequent requests settle around 80-130ms.
+
+- All HTTP traffic is proxied through Cloudflare. Your app sees requests from `127.0.0.1`. Use `X-Forwarded-For` or `CF-Connecting-IP` for the real client IP.
+- Cloudflare terminates TLS. Your app serves plain HTTP on localhost. Do not set up TLS certificates on the app.
+- WebSockets work through the tunnel. No special configuration needed.
+- Maximum upload size: Cloudflare free plan limits request bodies to 100MB.
+- Request timeout: Cloudflare has a 100-second timeout for HTTP responses. Long-running requests may be cut off. Use background processing for heavy tasks.
+- Cold start latency: If the tunnel is idle, the first request may take 500ms+. Subsequent requests settle around 20-80ms.
 
 ### Deployment
-- **`main` branch only.** Pushes to other branches do not trigger deploys.
-- **Hard reset on deploy.** The deploy script does `git reset --hard origin/main`. Any files manually created in `~/app/` that aren't in the repo will survive (git doesn't delete untracked files), but any local modifications to tracked files are destroyed.
-- **No rollback mechanism.** If a deploy breaks the app, push a fix to main. The previous version is not saved. If you need rollback capability, use Docker with tagged images.
-- **Deploy timeout is 5 minutes.** If dependency installation or Docker builds take longer, the deploy is killed. Optimize your Dockerfile with multi-stage builds and layer caching.
+
+- `main` branch only. Pushes to other branches do not trigger deploys.
+- Hard reset on deploy. The deploy script does `git reset --hard origin/main`. Any files manually created in the repo directory that are not in the repo will survive (git does not delete untracked files), but any local modifications to tracked files are destroyed.
+- No rollback mechanism. If a deploy breaks the app, push a fix to main. The previous version is not saved.
+- Deploy timeout is 5 minutes. If dependency installation or builds take longer, the deploy is killed.
+
+### Node.js via nvm
+
+Node.js is installed through nvm, not the system package manager. This means the `node` and `npm` binaries are located under `~/.nvm/versions/node/` rather than `/usr/local/bin/`. Systemd services that need Node.js must explicitly set the `PATH` environment variable to include the nvm binary directory, otherwise the binaries will not be found. See the `pirateflow-frontend.service` unit file for an example.
 
 ### Security
-- **The webhook secret is sensitive.** Don't commit it to the repo or share it in chat. If compromised, anyone can trigger deploys on the Pi.
-- **The deploy key has read-only access** to the repo. The Pi can pull but not push.
-- **SSH access is key-only** through the Cloudflare Tunnel. The Pi's SSH port is not directly exposed to the internet.
+
+- The webhook secret is sensitive. Do not commit it to the repo or share it in chat. If compromised, anyone can trigger deploys on the server.
+- SSH access is key-only through the Cloudflare Tunnel. The server's SSH port is not directly exposed to the internet.
 
 ---
 
 ## How To: Common Tasks
 
-### Add a public subdomain for the app
+### Add a new hostname to the tunnel
 
-Gonzei does this. Steps:
-
-1. Edit `/etc/cloudflared/config.yml` and add an ingress rule ABOVE the catch-all:
+1. Edit `/etc/cloudflared/config.yml` and add an ingress rule ABOVE the catch-all `http_status:404`:
    ```yaml
-   - hostname: app.lodgepi.com
+   - hostname: newapp.benkosiek.com
      service: http://localhost:8080
    ```
-2. Go to Cloudflare dashboard -> `lodgepi.com` -> DNS -> Add record:
+2. Go to Cloudflare dashboard -> DNS -> Add record:
    - Type: CNAME
-   - Name: `app`
-   - Target: `e8673a06-1ebf-4540-89a5-9ccb77c22389.cfargotunnel.com`
+   - Name: `newapp`
+   - Target: `b5031382-bc55-4d99-bf6f-8235be571a4d.cfargotunnel.com`
    - Proxy: enabled (orange cloud)
 3. Restart the tunnel: `sudo systemctl restart cloudflared`
 
-### Create the app systemd service
-
-Once the team decides on a stack, Gonzei creates `/etc/systemd/system/app.service`. Example for a Python FastAPI app:
-
-```ini
-[Unit]
-Description=App Server
-After=network.target
-
-[Service]
-Type=simple
-User=gonzei
-WorkingDirectory=/home/gonzei/app
-ExecStart=/home/gonzei/app/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Example for a Node.js app:
-
-```ini
-[Unit]
-Description=App Server
-After=network.target
-
-[Service]
-Type=simple
-User=gonzei
-WorkingDirectory=/home/gonzei/app
-ExecStart=/usr/local/bin/node server.js
-Restart=always
-RestartSec=3
-Environment=NODE_ENV=production
-Environment=PORT=8080
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now app
-```
-
-For Docker-based projects, no `app` service is needed -- Docker manages the containers directly.
-
-### Enable PostgreSQL and create a database
-
-```bash
-sudo systemctl enable --now postgresql
-sudo -u postgres createuser --pwprompt myapp
-sudo -u postgres createdb --owner=myapp myappdb
-```
-
-Connection string: `postgresql://myapp:password@localhost:5432/myappdb`
-
-### Enable Redis
-
-```bash
-sudo systemctl enable --now redis-server
-redis-cli ping  # Should return PONG
-```
-
-Connection: `redis://localhost:6379`
-
-### Check what's using resources
+### Check what is using resources
 
 ```bash
 htop                    # Interactive process viewer
 free -h                 # Memory usage
 df -h /                 # Disk usage
 docker stats            # Docker container resource usage
+ss -tlnp                # All listening ports and their processes
 sudo systemctl list-units --type=service --state=running  # Running services
+```
+
+### Manually trigger a deploy
+
+```bash
+cd /home/benkosiek/deploy-pirateflow
+bash deploy.sh
+```
+
+### View recent deploy output
+
+```bash
+tail -50 /var/log/pirateflow/deploy.log
+```
+
+### Restart PirateFlow services
+
+```bash
+sudo systemctl restart pirateflow-backend
+sudo systemctl restart pirateflow-frontend
 ```
