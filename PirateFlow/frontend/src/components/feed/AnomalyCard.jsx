@@ -1,7 +1,7 @@
 const severityConfig = {
-  critical: { color: "var(--danger)", label: "Critical", icon: "◬" },
-  warning: { color: "var(--warning)", label: "Warning", icon: "◈" },
-  info: { color: "var(--accent)", label: "Info", icon: "◎" },
+  critical: { color: "var(--danger)", label: "Critical", icon: "\u25EC" },
+  warning: { color: "var(--warning)", label: "Warning", icon: "\u25C8" },
+  info: { color: "var(--accent)", label: "Info", icon: "\u25CE" },
 };
 
 const typeLabels = {
@@ -10,6 +10,7 @@ const typeLabels = {
   utilization_spike: "Utilization Spike",
   space_hoarding: "Space Hoarding",
   unusual_pattern: "Unusual Pattern",
+  unauthorized_access: "Unauthorized Access",
 };
 
 function timeAgo(timestamp) {
@@ -20,19 +21,12 @@ function timeAgo(timestamp) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-/**
- * AnomalyCard
- * Props:
- *   anomaly  — Anomaly object (see interfaces.ts)
- *   onDismiss — (id: string) => void
- *   isNew    — boolean, triggers slide-in animation
- */
 export default function AnomalyCard({ anomaly, onDismiss, isNew = false }) {
-  const sev = severityConfig[anomaly.severity];
+  const sev = severityConfig[anomaly.severity] || severityConfig.info;
 
   return (
     <div
-      className="rounded-xl p-5 transition-all duration-500"
+      className="rounded-xl p-4 transition-all duration-500"
       style={{
         background: "var(--bg-card)",
         border: `1px solid ${sev.color}44`,
@@ -40,9 +34,9 @@ export default function AnomalyCard({ anomaly, onDismiss, isNew = false }) {
         animation: isNew ? "slideIn 0.4s ease-out" : "none",
       }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 flex-1">
-          <span style={{ fontSize: "20px", color: sev.color, marginTop: 2 }}>{sev.icon}</span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2.5 flex-1">
+          <span style={{ fontSize: 18, color: sev.color, marginTop: 1 }}>{sev.icon}</span>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span
@@ -55,24 +49,28 @@ export default function AnomalyCard({ anomaly, onDismiss, isNew = false }) {
                 className="text-xs px-2 py-0.5 rounded-full"
                 style={{ background: "var(--border)", color: "var(--text-muted)" }}
               >
-                {typeLabels[anomaly.type]}
+                {typeLabels[anomaly.type] || anomaly.type || "Anomaly"}
               </span>
-              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                {anomaly.room_name} · {anomaly.building_name}
-              </span>
+              {(anomaly.room_name || anomaly.building_name) && (
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {anomaly.room_name}{anomaly.room_name && anomaly.building_name ? " \u00B7 " : ""}{anomaly.building_name}
+                </span>
+              )}
             </div>
 
-            <p style={{ fontSize: "14px", color: "var(--text-primary)", marginBottom: 6, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "var(--text-primary)", marginBottom: 4, lineHeight: 1.5 }}>
               {anomaly.description}
             </p>
 
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-              <span style={{ color: "var(--accent)", fontWeight: 600 }}>→ </span>
-              {anomaly.recommended_action}
-            </p>
+            {anomaly.recommended_action && (
+              <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                <span style={{ color: "var(--accent)", fontWeight: 600 }}>&rarr; </span>
+                {anomaly.recommended_action}
+              </p>
+            )}
 
-            <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: 8 }}>
-              Detected {timeAgo(anomaly.detected_at)}
+            <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6 }}>
+              Detected {timeAgo(anomaly.detected_at || anomaly.created_at || new Date().toISOString())}
             </p>
           </div>
         </div>
@@ -80,13 +78,14 @@ export default function AnomalyCard({ anomaly, onDismiss, isNew = false }) {
         {onDismiss && (
           <button
             onClick={() => onDismiss(anomaly.id)}
-            className="text-sm px-3 py-1 rounded-lg transition-all"
+            className="text-sm px-2.5 py-1 rounded-lg transition-all"
             style={{
               background: "transparent",
               border: "1px solid var(--border)",
               color: "var(--text-muted)",
               cursor: "pointer",
               flexShrink: 0,
+              fontSize: 12,
             }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = "var(--danger)";

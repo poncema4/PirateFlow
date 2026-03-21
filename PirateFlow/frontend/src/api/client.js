@@ -1,7 +1,6 @@
 import axios from "axios";
 
-// ─── Token Storage ─────────────────────────────────────────────────────────────
-// Stored in localStorage (hackathon tradeoff — in prod, use httpOnly cookies)
+// ─── Token Storage ──────────────────────────────────────────────────────────
 export const tokenStorage = {
   getAccess: () => localStorage.getItem("pf_access"),
   getRefresh: () => localStorage.getItem("pf_refresh"),
@@ -16,20 +15,20 @@ export const tokenStorage = {
   },
 };
 
-// ─── Axios Instance ────────────────────────────────────────────────────────────
+// ─── Axios Instance ─────────────────────────────────────────────────────────
 const apiClient = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
 });
 
-// ─── Request Interceptor: inject Authorization header ─────────────────────────
+// Inject auth header
 apiClient.interceptors.request.use((config) => {
   const token = tokenStorage.getAccess();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// ─── Response Interceptor: 401 → silent refresh → retry ──────────────────────
+// 401 → silent refresh → retry
 let isRefreshing = false;
 let refreshQueue = [];
 
@@ -41,7 +40,6 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !original._retried) {
       original._retried = true;
 
-      // Queue any concurrent requests while refresh is in flight
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           refreshQueue.push({ resolve, reject });
@@ -53,7 +51,6 @@ apiClient.interceptors.response.use(
 
       isRefreshing = true;
       try {
-        // Use raw axios (not apiClient) to avoid interceptor loop
         const { data } = await axios.post("/api/auth/refresh", {
           refresh_token: tokenStorage.getRefresh(),
         });
@@ -77,11 +74,14 @@ apiClient.interceptors.response.use(
   }
 );
 
-// ─── Typed API Functions ───────────────────────────────────────────────────────
+// ─── API Methods ────────────────────────────────────────────────────────────
 export const api = {
   // Auth
   login: (email, password) =>
     apiClient.post("/auth/login", { email, password }).then((r) => r.data),
+
+  studentLookup: (studentId) =>
+    apiClient.post("/auth/lookup", { student_id: studentId }).then((r) => r.data),
 
   refreshToken: (refreshToken) =>
     apiClient.post("/auth/refresh", { refresh_token: refreshToken }).then((r) => r.data),
@@ -119,12 +119,41 @@ export const api = {
   cancelBooking: (bookingId) =>
     apiClient.patch(`/bookings/${bookingId}/cancel`).then((r) => r.data),
 
+  // Analytics
+  getUtilization: (params = {}) =>
+    apiClient.get("/analytics/utilization", { params }).then((r) => r.data),
+
+  getHeatmap: () =>
+    apiClient.get("/analytics/utilization/heatmap").then((r) => r.data),
+
+  getRevenue: () =>
+    apiClient.get("/analytics/revenue").then((r) => r.data),
+
+  getRevenueOpportunity: () =>
+    apiClient.get("/analytics/revenue/opportunity").then((r) => r.data),
+
+  getPeakHours: () =>
+    apiClient.get("/analytics/peak-hours").then((r) => r.data),
+
   // AI
   aiSearch: (query) =>
     apiClient.post("/ai/search", { query }).then((r) => r.data),
 
   getRecommendations: () =>
     apiClient.get("/ai/recommendations").then((r) => r.data),
+
+  predict: (days = 7) =>
+    apiClient.post("/ai/predict", { days }).then((r) => r.data),
+
+  detectAnomalies: () =>
+    apiClient.post("/ai/anomalies", {}).then((r) => r.data),
+
+  // Demo
+  startDemo: () =>
+    apiClient.post("/demo/start").then((r) => r.data),
+
+  stopDemo: () =>
+    apiClient.post("/demo/stop").then((r) => r.data),
 };
 
 export default apiClient;

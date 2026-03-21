@@ -1,19 +1,19 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../App";
+import { useAuth } from "../../hooks/useAuth";
 
 const adminNavItems = [
-  { path: "/dashboard", label: "Dashboard", icon: "⬡" },
-  { path: "/spaces", label: "Spaces", icon: "◫" },
-  { path: "/bookings", label: "Bookings", icon: "◷" },
-  { path: "/analytics", label: "Analytics", icon: "◈" },
-  { path: "/revenue", label: "Revenue", icon: "◎" },
-  { path: "/alerts", label: "Alerts", icon: "◬" },
+  { path: "/dashboard", label: "Dashboard", icon: "\u2B21" },
+  { path: "/",          label: "Spaces",    icon: "\u25EB" },
+  { path: "/bookings",  label: "Bookings",  icon: "\u25F7" },
+  { path: "/analytics", label: "Analytics", icon: "\u25C8" },
+  { path: "/revenue",   label: "Revenue",   icon: "\u25CE" },
+  { path: "/alerts",    label: "Alerts",    icon: "\u25EC" },
 ];
 
 const studentNavItems = [
-  { path: "/spaces", label: "Spaces", icon: "◫" },
-  { path: "/bookings", label: "Bookings", icon: "◷" },
+  { path: "/",          label: "Spaces",   icon: "\u25EB" },
+  { path: "/bookings",  label: "Bookings", icon: "\u25F7" },
 ];
 
 export default function Sidebar({ alertCount = 0 }) {
@@ -32,17 +32,28 @@ export default function Sidebar({ alertCount = 0 }) {
     <aside
       className="flex flex-col h-screen sticky top-0 transition-all duration-300"
       style={{
-        width: collapsed ? "64px" : "220px",
+        width: collapsed ? 60 : 200,
         background: "var(--sidebar-bg)",
         borderRight: "1px solid var(--border)",
         flexShrink: 0,
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5" style={{ borderBottom: "1px solid var(--border)" }}>
-        <span style={{ fontSize: "22px" }}>🏴‍☠️</span>
+      <div
+        className="flex items-center gap-2.5 px-4"
+        style={{ borderBottom: "1px solid var(--border)", height: 56, flexShrink: 0 }}
+      >
+        <span style={{ fontSize: 20 }}>&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</span>
         {!collapsed && (
-          <span style={{ fontFamily: "var(--font-display)", fontSize: "18px", color: "var(--accent)", letterSpacing: "-0.5px", fontWeight: 700 }}>
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 16,
+              color: "var(--accent)",
+              letterSpacing: "-0.5px",
+              fontWeight: 700,
+            }}
+          >
             PirateFlow
           </span>
         )}
@@ -65,26 +76,27 @@ export default function Sidebar({ alertCount = 0 }) {
       )}
 
       {/* Nav */}
-      <nav className="flex-1 py-4 flex flex-col gap-1 px-2">
+      <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 relative"
+            end={item.path === "/"}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 relative"
             style={({ isActive }) => ({
               background: isActive ? "var(--accent-muted)" : "transparent",
               color: isActive ? "var(--accent)" : "var(--text-muted)",
               fontWeight: isActive ? 600 : 400,
-              fontSize: "14px",
+              fontSize: 13,
               textDecoration: "none",
             })}
           >
-            <span style={{ fontSize: "16px", minWidth: "20px", textAlign: "center" }}>{item.icon}</span>
+            <span style={{ fontSize: 14, minWidth: 18, textAlign: "center" }}>{item.icon}</span>
             {!collapsed && <span>{item.label}</span>}
             {item.path === "/alerts" && alertCount > 0 && isAdmin && (
               <span
                 className="ml-auto text-xs rounded-full px-1.5 py-0.5"
-                style={{ background: "var(--danger)", color: "#fff", fontSize: "11px", minWidth: "20px", textAlign: "center" }}
+                style={{ background: "var(--danger)", color: "#fff", fontSize: 10, minWidth: 18, textAlign: "center" }}
               >
                 {alertCount}
               </span>
@@ -93,21 +105,21 @@ export default function Sidebar({ alertCount = 0 }) {
         ))}
       </nav>
 
-      {/* User info + logout + collapse */}
-      <div style={{ borderTop: "1px solid var(--border)", padding: "12px" }}>
+      {/* User + controls */}
+      <div style={{ borderTop: "1px solid var(--border)", padding: 10 }}>
         {!collapsed && (
           <div className="flex items-center gap-2 mb-2 px-1">
             <div
               className="rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ width: 32, height: 32, background: "var(--accent)", color: "#000", flexShrink: 0 }}
+              style={{ width: 28, height: 28, background: "var(--accent)", color: "#000", flexShrink: 0 }}
             >
               {user?.name?.[0] || "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user?.name || "Guest"}
               </p>
-              <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>SHU {isAdmin ? "Staff" : "Student"}</p>
+              <p style={{ fontSize: 10, color: "var(--text-muted)" }}>SHU {isAdmin ? "Staff" : "Student"}</p>
             </div>
           </div>
         )}
@@ -115,20 +127,20 @@ export default function Sidebar({ alertCount = 0 }) {
         <button
           onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg transition-all mb-1"
-          style={{ color: "var(--danger)", fontSize: "12px", background: "transparent", border: "1px solid transparent", cursor: "pointer" }}
+          style={{ color: "var(--danger)", fontSize: 11, background: "transparent", border: "1px solid transparent", cursor: "pointer" }}
           onMouseEnter={e => e.currentTarget.style.borderColor = "var(--danger)"}
           onMouseLeave={e => e.currentTarget.style.borderColor = "transparent"}
         >
-          <span>⎋</span>
+          <span>&#x238B;</span>
           {!collapsed && <span>Logout</span>}
         </button>
 
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="w-full flex items-center justify-center py-1 rounded-lg transition-colors"
-          style={{ color: "var(--text-muted)", fontSize: "12px", background: "transparent", border: "none", cursor: "pointer" }}
+          style={{ color: "var(--text-muted)", fontSize: 11, background: "transparent", border: "none", cursor: "pointer" }}
         >
-          {collapsed ? "→" : "← Collapse"}
+          {collapsed ? "\u2192" : "\u2190 Collapse"}
         </button>
       </div>
     </aside>
