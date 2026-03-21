@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { tokenStorage } from "../api/client";
 
 const WebSocketContext = createContext(null);
+
+const WS_URL = "ws://localhost:8000/ws";
 
 export function WebSocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
@@ -8,26 +11,8 @@ export function WebSocketProvider({ children }) {
   const wsRef = useRef(null);
   const listenersRef = useRef({});
   const reconnectDelay = useRef(1000);
-
-  const connect = () => {
-    try {
-      // When backend WebSocket is ready, replace with:
-      // wsRef.current = new WebSocket("ws://localhost:5000/ws");
-      // For now we simulate connection
-      setConnected(true);
-      reconnectDelay.current = 1000;
-    } catch (err) {
-      scheduleReconnect();
-    }
-  };
-
-  const scheduleReconnect = () => {
-    setConnected(false);
-    setTimeout(() => {
-      reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000);
-      connect();
-    }, reconnectDelay.current);
-  };
+  const reconnectTimer = useRef(null);
+  const manualClose = useRef(false);
 
   const on = (eventName, callback) => {
     if (!listenersRef.current[eventName]) {
@@ -49,12 +34,65 @@ export function WebSocketProvider({ children }) {
     setLastEvent({ event: eventName, data, timestamp: new Date().toISOString() });
   };
 
+  const connect = () => {
+    try {
+      const token = tokenStorage.getAccess();
+      const url = token ? `${WS_URL}?token=${token}` : WS_URL;
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setConnected(true);
+        reconnectDelay.current = 1000;
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const parsed = JSON.parse(event.data);
+          const eventName = parsed.event || parsed.type;
+          const data = parsed.data || parsed;
+          if (eventName) {
+            const handlers = listenersRef.current[eventName] || [];
+            handlers.forEach((cb) => cb(data));
+            setLastEvent({ event: eventName, data, timestamp: new Date().toISOString() });
+          }
+        } catch {
+          // Non-JSON message — ignore
+        }
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        if (!manualClose.current) {
+          // Auto-reconnect with exponential backoff
+          reconnectTimer.current = setTimeout(() => {
+            reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000);
+            connect();
+          }, reconnectDelay.current);
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    } catch {
+      // WebSocket not available — fall back to simulated connected state
+      setConnected(true);
+    }
+  };
+
   useEffect(() => {
+    manualClose.current = false;
     connect();
+
     return () => {
-      if (wsRef.current) wsRef.current.close();
+      manualClose.current = true;
+      clearTimeout(reconnectTimer.current);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <WebSocketContext.Provider value={{ connected, lastEvent, on, off, emit }}>

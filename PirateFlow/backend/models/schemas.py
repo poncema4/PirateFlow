@@ -63,6 +63,7 @@ class AnomalyType(str, Enum):
     utilization_spike = "utilization_spike"
     space_hoarding = "space_hoarding"
     unusual_pattern = "unusual_pattern"
+    unauthorized_access = "unauthorized_access"
 
 
 class Severity(str, Enum):
@@ -295,6 +296,46 @@ class AIAnomalyReport(BaseModel):
     recommended_action: str
     supporting_data: dict = {}
     detected_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Face Access Control
+# ---------------------------------------------------------------------------
+
+class FaceRegisterRequest(BaseModel):
+    image_base64: str
+
+
+class FaceRegisterResponse(BaseModel):
+    user_id: str
+    status: str  # "registered" or "updated"
+    message: str
+
+
+class FaceVerifyRequest(BaseModel):
+    room_id: str
+    image_base64: str
+
+
+class FaceVerifyResponse(BaseModel):
+    recognized: bool
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    has_valid_booking: Optional[bool] = None
+    confidence: Optional[float] = None
+    alert_sent: bool = False
+
+
+class AccessLogEntry(BaseModel):
+    id: str
+    room_id: str
+    room_name: str
+    detected_user_id: Optional[str] = None
+    detected_user_name: Optional[str] = None
+    matched_confidence: Optional[float] = None
+    had_valid_booking: bool
+    alert_sent: bool
+    captured_at: datetime
 
 
 # ---------------------------------------------------------------------------

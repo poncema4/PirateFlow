@@ -9,3 +9,4 @@ venv/
 dist/
 .DS_Store
 .claude/
+memory/

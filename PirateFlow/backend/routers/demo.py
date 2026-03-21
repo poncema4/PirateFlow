@@ -54,6 +54,19 @@ async def _run_demo_simulation():
                 "description": f"No-show detected for {room} in {building}",
             })
 
+        # Occasionally simulate an unauthorized access alert
+        if random.random() < 0.08:
+            detected = random.choice(["Unknown", "Bob Smith", "Jane Doe"])
+            await manager.broadcast_to_admins("access_alert", {
+                "type": "unauthorized_access",
+                "severity": "critical",
+                "room_name": room,
+                "building_name": building,
+                "description": f"{'Unrecognized person' if detected == 'Unknown' else detected} detected in {room}, {building} without a valid booking.",
+                "detected_user": detected,
+                "detected_at": datetime.now(timezone.utc).isoformat(),
+            })
+
         await asyncio.sleep(random.uniform(3, 5))
 
 
