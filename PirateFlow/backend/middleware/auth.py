@@ -53,30 +53,19 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 # ---------------------------------------------------------------------------
 
 def _decode_token(token: str) -> Optional[UserPayload]:
-    """
-    Decode and validate a JWT access token.
+    """Decode and validate a JWT access token. Returns UserPayload or None."""
+    from services.auth import decode_access_token
 
-    TODO: Role 1 will replace this with real JWT verification using
-    python-jose and the JWT_SECRET from environment.
-
-    Current behavior: accepts stub tokens for development and returns
-    a demo user so the frontend team can test authenticated flows.
-    """
-    # Stub: accept any token and return a demo admin
-    # Role 1 replaces this with:
-    #   from jose import jwt, JWTError
-    #   payload = jwt.decode(token, SECRET, algorithms=["HS256"])
-    #   return UserPayload(user_id=payload["sub"], email=payload["email"], role=payload["role"])
+    payload = decode_access_token(token)
+    if payload is None:
+        return None
     try:
-        # Check for specific stub tokens to simulate different roles
-        if token == "stub-student-token":
-            return UserPayload(user_id="usr_010", email="student@shu.edu", role=UserRole.student)
-        elif token == "stub-staff-token":
-            return UserPayload(user_id="usr_005", email="staff@shu.edu", role=UserRole.staff)
-        else:
-            # Default: admin for development convenience
-            return UserPayload(user_id="usr_001", email="admin@shu.edu", role=UserRole.admin)
-    except Exception:
+        return UserPayload(
+            user_id=payload["sub"],
+            email=payload["email"],
+            role=UserRole(payload["role"]),
+        )
+    except (KeyError, ValueError):
         return None
 
 

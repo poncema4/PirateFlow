@@ -5,42 +5,42 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from middleware.auth import UserPayload, get_current_user
 from middleware.rate_limit import rate_limit_ip
 from models.schemas import LoginRequest, LoginResponse, RefreshRequest, StudentLookupRequest, TokenPair, UserOut, UserRole
+from models.schemas import LoginRequest, LoginResponse, RefreshRequest, TokenPair, UserOut, UserRole
+from services.auth import verify_password, create_access_token, create_refresh_token, decode_refresh_token
+from services.database import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-
-# Map stub tokens to user IDs so login and decode stay in sync
-_STUB_USERS = {
-    "admin@shu.edu": {"id": "usr_001", "password": "openshu2026", "role": UserRole.admin, "first": "Demo", "last": "Admin"},
-    "staff@shu.edu": {"id": "usr_005", "password": "openshu2026", "role": UserRole.staff, "first": "Demo", "last": "Staff"},
-    "student@shu.edu": {"id": "usr_010", "password": "openshu2026", "role": UserRole.student, "first": "Demo", "last": "Student"},
-}
-
-# Stub token mapping — middleware/auth.py _decode_token() must match these
-_ROLE_TO_TOKEN = {
-    UserRole.admin: "stub-access-token",
-    UserRole.staff: "stub-staff-token",
-    UserRole.student: "stub-student-token",
-}
 
 
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest, _: None = Depends(rate_limit_ip(max_requests=5, window_seconds=60))):
     """Authenticate user, return JWT token pair."""
-    # TODO: wire to Role 1's auth module (bcrypt verify, real JWT signing)
-    user_info = _STUB_USERS.get(body.email)
-    if not user_info or body.password != user_info["password"]:
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE email = ?",
+        (body.email,),
+    )
+    row = await cursor.fetchone()
+
+    if not row or not verify_password(body.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    role = user_info["role"]
+    access = create_access_token(row["id"], row["email"], row["role"])
+    refresh = create_refresh_token(row["id"])
+
     return LoginResponse(
-        access_token=_ROLE_TO_TOKEN[role],
-        refresh_token="stub-refresh-token",
+        access_token=access,
+        refresh_token=refresh,
         user=UserOut(
-            id=user_info["id"],
-            email=body.email,
-            first_name=user_info["first"],
-            last_name=user_info["last"],
-            role=role,
+            id=row["id"],
+            email=row["email"],
+            first_name=row["first_name"],
+            last_name=row["last_name"],
+            role=UserRole(row["role"]),
+            department=row["department"],
+            major=row["major"],
+            year=row["year"],
+            student_id=row["student_id"],
         ),
     )
 
@@ -81,28 +81,43 @@ async def student_lookup(body: StudentLookupRequest, _: None = Depends(rate_limi
 @router.post("/refresh", response_model=TokenPair)
 async def refresh_token(body: RefreshRequest):
     """Exchange a refresh token for a new access token."""
-    # TODO: wire to Role 1's auth module
-    return TokenPair(
-        access_token="stub-access-token",
-        refresh_token="stub-new-refresh-token",
+    payload = decode_refresh_token(body.refresh_token)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, email, role FROM users WHERE id = ?", (payload["sub"],),
     )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    access = create_access_token(row["id"], row["email"], row["role"])
+    refresh = create_refresh_token(row["id"])
+    return TokenPair(access_token=access, refresh_token=refresh)
 
 
 @router.get("/me", response_model=UserOut)
 async def me(user: UserPayload = Depends(get_current_user)):
     """Return the current authenticated user's profile."""
-    # TODO: look up full user profile from DB using user.user_id
-    user_info = next(
-        (v for k, v in _STUB_USERS.items() if v["id"] == user.user_id),
-        None,
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, email, first_name, last_name, role, department, major, year, student_id FROM users WHERE id = ?",
+        (user.user_id,),
     )
-    if not user_info:
-        return UserOut(id=user.user_id, email=user.email, first_name="Unknown", last_name="User", role=user.role)
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
 
     return UserOut(
-        id=user.user_id,
-        email=user.email,
-        first_name=user_info["first"],
-        last_name=user_info["last"],
-        role=user.role,
+        id=row["id"],
+        email=row["email"],
+        first_name=row["first_name"],
+        last_name=row["last_name"],
+        role=UserRole(row["role"]),
+        department=row["department"],
+        major=row["major"],
+        year=row["year"],
+        student_id=row["student_id"],
     )
