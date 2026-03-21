@@ -31,10 +31,8 @@ __pycache__/
 *.pyd
 .Python
 *.egg-info/
+dist/
 build/
-
-# Database
-*.db
 
 # Environment variables
 .env
@@ -57,3 +55,7 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Database
+*.db
+*.sqlite3
