@@ -1,14 +1,22 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import StatsCard from "../components/StatsCard";
 import BuildingCard from "../components/BuildingCard";
 import ActivityFeed from "../components/ActivityFeed";
-import { mockBuildings, mockStats, mockActivityFeed } from "../api/mockData";
+import { api } from "../api/client";
+import { useWebSocket } from "../context/WebSocketContext";
+import { mockActivityFeed } from "../api/mockData";
+
+const roomNames = ["Room 101", "Room 204", "Study Room A", "Study Room B", "Lab 301", "Conference Room A", "Seminar Room 2"];
+
+function randomBetween(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 const eventTemplates = [
   { type: "occupancy", messages: [
     (r, b) => `Room ${r} in ${b} is now occupied`,
     (r, b) => `Room ${r} in ${b} is now available`,
-    (r, b) => `Study space ${r} in ${b} just opened up`,
   ]},
   { type: "booking", messages: [
     (r, b) => `New booking: ${r}, ${b}`,
@@ -21,17 +29,10 @@ const eventTemplates = [
   ]},
 ];
 
-const roomNames = ["Room 101", "Room 204", "Study Room A", "Study Room B", "Lab 301", "Conference Room A", "Seminar Room 2"];
-const buildingNames = ["Walsh Library", "McNulty Hall", "Jubilee Hall", "Fahy Hall", "Corrigan Hall", "Stafford Hall"];
-
-function randomBetween(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function generateEvent(id) {
+function generateEvent(id, buildingNames) {
   const template = eventTemplates[randomBetween(0, eventTemplates.length - 1)];
   const room = roomNames[randomBetween(0, roomNames.length - 1)];
-  const building = buildingNames[randomBetween(0, buildingNames.length - 1)];
+  const building = buildingNames[randomBetween(0, buildingNames.length - 1)] || "Campus";
   const msg = template.messages[randomBetween(0, template.messages.length - 1)];
   return {
     id: String(id),
@@ -42,33 +43,147 @@ function generateEvent(id) {
 }
 
 export default function Dashboard() {
-  const [buildingData, setBuildingData] = useState(mockBuildings);
-  const [stats, setStats] = useState(mockStats);
+  const navigate = useNavigate();
+  const { on, off } = useWebSocket();
+
+  const [buildingData, setBuildingData] = useState([]);
+  const [stats, setStats] = useState({
+    total_rooms: 0,
+    currently_occupied: 0,
+    occupancy_pct: 0,
+    todays_bookings: 0,
+    active_alerts: 0,
+    critical_alerts: 0,
+  });
   const [activity, setActivity] = useState(mockActivityFeed);
+  const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(true);
   const eventIdRef = useRef(100);
 
+  // ── Fetch real data from backend ────────────────────────────────────────────
   useEffect(() => {
-    // Swap with real API calls when backend is ready:
-    // apiClient.get("/buildings").then(res => setBuildingData(res.data));
-    // apiClient.get("/stats").then(res => setStats(res.data));
+    const fetchData = async () => {
+      try {
+        const buildings = await api.getBuildings();
+        setBuildingData(buildings);
+
+        // Derive stats from buildings
+        const totalRooms = buildings.reduce((sum, b) => sum + b.room_count, 0);
+        const occupiedRooms = buildings.reduce(
+          (sum, b) => sum + Math.round(b.current_occupancy_pct * b.room_count), 0
+        );
+        const avgOccupancy = totalRooms > 0
+          ? Math.round((occupiedRooms / totalRooms) * 100)
+          : 0;
+
+        setStats(prev => ({
+          ...prev,
+          total_rooms: totalRooms,
+          currently_occupied: occupiedRooms,
+          occupancy_pct: avgOccupancy,
+        }));
+      } catch (err) {
+        console.error("Failed to fetch buildings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // Real-time simulation
+  // ── WebSocket: listen for real-time events ──────────────────────────────────
   useEffect(() => {
-    if (!demoMode) return;
+    const handleOccupancy = (data) => {
+      setBuildingData(prev => prev.map(b =>
+        b.id === data.building_id
+          ? { ...b, current_occupancy_pct: data.occupancy_pct }
+          : b
+      ));
+      const newEvent = {
+        id: String(eventIdRef.current++),
+        type: "occupancy",
+        message: `${data.room_name} in ${data.building_name} is now ${data.status}`,
+        timestamp: new Date().toISOString(),
+      };
+      setActivity(prev => [newEvent, ...prev].slice(0, 25));
+    };
+
+    const handleBooking = (data) => {
+      setStats(prev => ({
+        ...prev,
+        todays_bookings: prev.todays_bookings + 1,
+      }));
+      const newEvent = {
+        id: String(eventIdRef.current++),
+        type: "booking",
+        message: `New booking: ${data.room_name}, ${data.building_name}`,
+        timestamp: new Date().toISOString(),
+      };
+      setActivity(prev => [newEvent, ...prev].slice(0, 25));
+    };
+
+    const handleAnomaly = (data) => {
+      setStats(prev => ({
+        ...prev,
+        active_alerts: prev.active_alerts + 1,
+        critical_alerts: data.severity === "critical"
+          ? prev.critical_alerts + 1
+          : prev.critical_alerts,
+      }));
+      const newEvent = {
+        id: String(eventIdRef.current++),
+        type: "anomaly",
+        message: data.description || `Anomaly detected in ${data.building_name}`,
+        timestamp: new Date().toISOString(),
+      };
+      setActivity(prev => [newEvent, ...prev].slice(0, 25));
+    };
+
+    const handleAccessAlert = (data) => {
+      setStats(prev => ({
+        ...prev,
+        active_alerts: prev.active_alerts + 1,
+        critical_alerts: prev.critical_alerts + 1,
+      }));
+      const newEvent = {
+        id: String(eventIdRef.current++),
+        type: "anomaly",
+        message: data.description || `Unauthorized access detected in ${data.room_name}`,
+        timestamp: new Date().toISOString(),
+      };
+      setActivity(prev => [newEvent, ...prev].slice(0, 25));
+    };
+
+    on("occupancy_changed", handleOccupancy);
+    on("booking_created", handleBooking);
+    on("booking_cancelled", handleBooking);
+    on("anomaly_alert", handleAnomaly);
+    on("access_alert", handleAccessAlert);
+
+    return () => {
+      off("occupancy_changed", handleOccupancy);
+      off("booking_created", handleBooking);
+      off("booking_cancelled", handleBooking);
+      off("anomaly_alert", handleAnomaly);
+      off("access_alert", handleAccessAlert);
+    };
+  }, [on, off]);
+
+  // ── Demo simulation (runs while waiting for real WebSocket events) ──────────
+  useEffect(() => {
+    if (!demoMode || buildingData.length === 0) return;
+
+    const buildingNames = buildingData.map(b => b.name);
 
     const interval = setInterval(() => {
-      // Update random buildings occupancy
       setBuildingData(prev => prev.map(b => {
         if (Math.random() > 0.6) return b;
-        const delta = randomBetween(-3, 3);
-        const newPct = Math.min(100, Math.max(0, b.current_occupancy_pct + delta));
-        const newOccupied = Math.round((newPct / 100) * b.room_count);
-        return { ...b, current_occupancy_pct: newPct, occupied_rooms: newOccupied };
+        const delta = (randomBetween(-3, 3)) / 100;
+        const newPct = Math.min(1, Math.max(0, b.current_occupancy_pct + delta));
+        return { ...b, current_occupancy_pct: newPct };
       }));
 
-      // Update stats
       setStats(prev => ({
         ...prev,
         currently_occupied: Math.max(0, prev.currently_occupied + randomBetween(-2, 2)),
@@ -76,14 +191,21 @@ export default function Dashboard() {
         todays_bookings: prev.todays_bookings + (Math.random() > 0.7 ? 1 : 0),
       }));
 
-      // Add new activity event
-      const newEvent = generateEvent(eventIdRef.current++);
+      const newEvent = generateEvent(eventIdRef.current++, buildingNames);
       setActivity(prev => [newEvent, ...prev].slice(0, 25));
-
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [demoMode]);
+  }, [demoMode, buildingData.length]);
+
+  // Normalize building for BuildingCard (API returns 0-1 pct, card expects 0-100)
+  const normalizedBuildings = buildingData.map(b => ({
+    ...b,
+    current_occupancy_pct: b.current_occupancy_pct > 1
+      ? b.current_occupancy_pct
+      : Math.round(b.current_occupancy_pct * 100),
+    occupied_rooms: Math.round(b.current_occupancy_pct * b.room_count),
+  }));
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -106,14 +228,14 @@ export default function Dashboard() {
               }}
             />
             <span style={{ fontSize: "13px", color: "var(--accent)", fontWeight: 600 }}>
-              Live Demo Mode — Simulating real-time campus activity
+              Live — Real-time campus activity
             </span>
           </div>
           <button
             onClick={() => setDemoMode(false)}
             style={{ fontSize: "12px", color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer" }}
           >
-            Stop
+            Stop simulation
           </button>
         </div>
       )}
@@ -145,11 +267,24 @@ export default function Dashboard() {
           >
             Buildings
           </p>
-          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-            {buildingData.map((b) => (
-              <BuildingCard key={b.id} building={b} onClick={() => {}} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="rounded-xl animate-pulse"
+                  style={{ height: 140, background: "var(--bg-card)", border: "1px solid var(--border)" }} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+              {normalizedBuildings.map((b) => (
+                <BuildingCard
+                  key={b.id}
+                  building={b}
+                  onClick={() => navigate(`/spaces/${b.id}`)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ width: 280, flexShrink: 0 }}>

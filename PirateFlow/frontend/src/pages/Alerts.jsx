@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { mockAnomalies } from "../api/mockData";
+import { useWebSocket } from "../context/WebSocketContext";
 
 const severityConfig = {
   critical: { color: "var(--danger)", label: "Critical", icon: "◬" },
@@ -13,6 +13,7 @@ const typeLabels = {
   utilization_spike: "Utilization Spike",
   space_hoarding: "Space Hoarding",
   unusual_pattern: "Unusual Pattern",
+  unauthorized_access: "Unauthorized Access",
 };
 
 function timeAgo(timestamp) {
@@ -24,7 +25,7 @@ function timeAgo(timestamp) {
 }
 
 function AnomalyCard({ anomaly, onDismiss, isNew }) {
-  const sev = severityConfig[anomaly.severity];
+  const sev = severityConfig[anomaly.severity] || severityConfig.info;
   return (
     <div
       className="rounded-xl p-5 transition-all duration-500"
@@ -46,34 +47,32 @@ function AnomalyCard({ anomaly, onDismiss, isNew }) {
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full"
                 style={{ background: "var(--border)", color: "var(--text-muted)" }}>
-                {typeLabels[anomaly.type]}
+                {typeLabels[anomaly.type] || anomaly.type || "Anomaly"}
               </span>
-              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                {anomaly.room_name} · {anomaly.building_name}
-              </span>
+              {(anomaly.room_name || anomaly.building_name) && (
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  {anomaly.room_name}{anomaly.room_name && anomaly.building_name ? " · " : ""}{anomaly.building_name}
+                </span>
+              )}
             </div>
             <p style={{ fontSize: "14px", color: "var(--text-primary)", marginBottom: 6, lineHeight: 1.5 }}>
               {anomaly.description}
             </p>
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-              <span style={{ color: "var(--accent)", fontWeight: 600 }}>→ </span>
-              {anomaly.recommended_action}
-            </p>
+            {anomaly.recommended_action && (
+              <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                <span style={{ color: "var(--accent)", fontWeight: 600 }}>→ </span>
+                {anomaly.recommended_action}
+              </p>
+            )}
             <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: 8 }}>
-              Detected {timeAgo(anomaly.detected_at)}
+              Detected {timeAgo(anomaly.detected_at || anomaly.created_at || new Date().toISOString())}
             </p>
           </div>
         </div>
         <button
           onClick={() => onDismiss(anomaly.id)}
           className="text-sm px-3 py-1 rounded-lg transition-all"
-          style={{
-            background: "transparent",
-            border: "1px solid var(--border)",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
+          style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", flexShrink: 0 }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--danger)"; e.currentTarget.style.color = "var(--danger)"; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
         >
@@ -92,9 +91,9 @@ function ScanSkeleton() {
           <div className="flex gap-3">
             <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--border)", animation: "shimmer 1.5s ease-in-out infinite" }} />
             <div className="flex-1 flex flex-col gap-2">
-              <div style={{ height: 12, width: "40%", borderRadius: 6, background: "var(--border)", animation: "shimmer 1.5s ease-in-out infinite" }} />
-              <div style={{ height: 12, width: "80%", borderRadius: 6, background: "var(--border)", animation: "shimmer 1.5s ease-in-out infinite" }} />
-              <div style={{ height: 12, width: "60%", borderRadius: 6, background: "var(--border)", animation: "shimmer 1.5s ease-in-out infinite" }} />
+              {[40, 80, 60].map((w, j) => (
+                <div key={j} style={{ height: 12, width: `${w}%`, borderRadius: 6, background: "var(--border)", animation: "shimmer 1.5s ease-in-out infinite" }} />
+              ))}
             </div>
           </div>
         </div>
@@ -104,39 +103,94 @@ function ScanSkeleton() {
 }
 
 export default function Alerts() {
-  const [anomalies, setAnomalies] = useState(mockAnomalies);
+  const [anomalies, setAnomalies] = useState([]);
   const [scanning, setScanning] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newIds, setNewIds] = useState(new Set());
+  const { on, off } = useWebSocket();
+
+  const token = localStorage.getItem("pf_access");
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+  // Load existing anomalies on mount
+  useEffect(() => {
+    fetch("/api/ai/anomalies", { method: "POST", headers, body: JSON.stringify({}) })
+      .then(r => r.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data : data.anomalies || data.data || [];
+        setAnomalies(list);
+      })
+      .catch(() => setAnomalies([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Listen for real-time access alerts from camera
+  useEffect(() => {
+    const handleAccessAlert = (data) => {
+      const newAnomaly = {
+        id: `access_${Date.now()}`,
+        type: "unauthorized_access",
+        severity: "critical",
+        room_id: data.room_id,
+        room_name: data.room_name,
+        building_name: data.building_name,
+        description: data.description || `Unauthorized access detected in ${data.room_name}`,
+        recommended_action: "Review camera footage and verify who entered the room.",
+        detected_at: data.detected_at || new Date().toISOString(),
+      };
+      setAnomalies(prev => [newAnomaly, ...prev]);
+      setNewIds(prev => new Set([...prev, newAnomaly.id]));
+      setTimeout(() => setNewIds(prev => { const n = new Set(prev); n.delete(newAnomaly.id); return n; }), 3000);
+    };
+
+    const handleAnomalyAlert = (data) => {
+      const newAnomaly = {
+        id: `ws_${Date.now()}`,
+        type: data.type || "unusual_pattern",
+        severity: data.severity || "warning",
+        room_name: data.room_name,
+        building_name: data.building_name,
+        description: data.description,
+        recommended_action: data.recommended_action,
+        detected_at: data.detected_at || new Date().toISOString(),
+      };
+      setAnomalies(prev => [newAnomaly, ...prev]);
+      setNewIds(prev => new Set([...prev, newAnomaly.id]));
+      setTimeout(() => setNewIds(prev => { const n = new Set(prev); n.delete(newAnomaly.id); return n; }), 3000);
+    };
+
+    on("access_alert", handleAccessAlert);
+    on("anomaly_alert", handleAnomalyAlert);
+    return () => {
+      off("access_alert", handleAccessAlert);
+      off("anomaly_alert", handleAnomalyAlert);
+    };
+  }, [on, off]);
 
   const dismiss = (id) => setAnomalies(prev => prev.filter(a => a.id !== id));
 
   const scan = async () => {
     setScanning(true);
-    // Replace with: const res = await apiClient.post("/ai/anomalies");
-    await new Promise(r => setTimeout(r, 2500));
-
-    // Simulate a new anomaly arriving
-    const newAnomaly = {
-      id: String(Date.now()),
-      type: "unusual_pattern",
-      severity: "warning",
-      room_id: "r99",
-      room_name: "Room 105",
-      building_name: "McNulty Hall",
-      description: "Occupancy sensor shows repeated 2-minute check-ins suggesting badge-tap abuse to hold the space without actual usage.",
-      recommended_action: "Implement a minimum 15-minute occupancy threshold before space is marked as reserved.",
-      detected_at: new Date().toISOString(),
-    };
-    setAnomalies(prev => [newAnomaly, ...prev]);
-    setNewIds(prev => new Set([...prev, newAnomaly.id]));
-    setTimeout(() => setNewIds(prev => { const n = new Set(prev); n.delete(newAnomaly.id); return n; }), 2000);
-    setScanning(false);
+    try {
+      const res = await fetch("/api/ai/anomalies", { method: "POST", headers, body: JSON.stringify({}) });
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.anomalies || data.data || [];
+      if (list.length > 0) {
+        setAnomalies(list);
+      }
+    } catch {
+      // Keep existing anomalies on error
+    } finally {
+      setScanning(false);
+    }
   };
 
   const sorted = [...anomalies].sort((a, b) => {
     const order = { critical: 0, warning: 1, info: 2 };
-    return order[a.severity] - order[b.severity];
+    return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
   });
+
+  const criticalCount = anomalies.filter(a => a.severity === "critical").length;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -146,10 +200,10 @@ export default function Alerts() {
           <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
             {anomalies.length} anomalies detected
           </span>
-          {anomalies.filter(a => a.severity === "critical").length > 0 && (
+          {criticalCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-bold"
               style={{ background: "var(--danger)", color: "#fff" }}>
-              {anomalies.filter(a => a.severity === "critical").length} critical
+              {criticalCount} critical
             </span>
           )}
         </div>
@@ -168,12 +222,10 @@ export default function Alerts() {
         </button>
       </div>
 
-      {/* Cards or skeleton */}
-      {scanning ? (
+      {/* Content */}
+      {loading || scanning ? (
         <div>
-          <p className="mb-3" style={{ fontSize: "13px", color: "var(--accent)" }}>
-            AI is analyzing campus data...
-          </p>
+          {scanning && <p className="mb-3" style={{ fontSize: "13px", color: "var(--accent)" }}>AI is analyzing campus data...</p>}
           <ScanSkeleton />
         </div>
       ) : sorted.length === 0 ? (
@@ -191,14 +243,8 @@ export default function Alerts() {
       )}
 
       <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(-12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shimmer {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
       `}</style>
     </div>
   );
