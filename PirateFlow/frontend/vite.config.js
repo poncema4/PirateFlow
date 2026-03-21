@@ -20,3 +20,4 @@ export default defineConfig({
     allowedHosts: ['pirateflow.net', 'www.pirateflow.net']
   }
 })
+
