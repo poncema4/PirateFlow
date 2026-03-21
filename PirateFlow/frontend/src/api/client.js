@@ -18,7 +18,7 @@ export const tokenStorage = {
 
 // ─── Axios Instance ────────────────────────────────────────────────────────────
 const apiClient = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.PROD ? "https://api.pirateflow.net/api" : "/api",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -54,7 +54,10 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
       try {
         // Use raw axios (not apiClient) to avoid interceptor loop
-        const { data } = await axios.post("/api/auth/refresh", {
+        const refreshURL = import.meta.env.PROD
+          ? "https://api.pirateflow.net/api/auth/refresh"
+          : "/api/auth/refresh";
+        const { data } = await axios.post(refreshURL, {
           refresh_token: tokenStorage.getRefresh(),
         });
         tokenStorage.set(data.access_token, null);
@@ -82,6 +85,9 @@ export const api = {
   // Auth
   login: (email, password) =>
     apiClient.post("/auth/login", { email, password }).then((r) => r.data),
+
+  studentLookup: (studentId) =>
+    apiClient.post("/auth/lookup", { student_id: studentId }).then((r) => r.data),
 
   refreshToken: (refreshToken) =>
     apiClient.post("/auth/refresh", { refresh_token: refreshToken }).then((r) => r.data),
