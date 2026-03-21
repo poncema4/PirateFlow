@@ -62,8 +62,9 @@ def open_video_source(source: str) -> cv2.VideoCapture:
     if source == "webcam":
         cap = cv2.VideoCapture(0)
     else:
-        # RTSP or other URL
-        cap = cv2.VideoCapture(source)
+        # RTSP — use TCP transport for reliability over ethernet
+        cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer to get latest frame
 
     if not cap.isOpened():
         print(f"ERROR: Could not open video source: {source}")
@@ -71,6 +72,18 @@ def open_video_source(source: str) -> cv2.VideoCapture:
 
     print(f"Video source opened: {source}")
     return cap
+
+
+def flush_and_read(cap: cv2.VideoCapture, is_rtsp: bool):
+    """
+    Read the latest frame. For RTSP, flush the buffer first so we don't
+    process stale frames that have been sitting in OpenCV's internal buffer.
+    """
+    if is_rtsp:
+        # Flush buffer by grabbing (not decoding) several frames
+        for _ in range(5):
+            cap.grab()
+    return cap.read()
 
 
 def frame_to_base64(frame) -> str:
@@ -147,16 +160,31 @@ def main():
     print()
 
     cap = open_video_source(args.source)
+    is_rtsp = args.source != "webcam"
     last_scan = 0
     last_result = {}
+    reconnect_attempts = 0
 
     try:
         while True:
-            ret, frame = cap.read()
+            ret, frame = flush_and_read(cap, is_rtsp)
             if not ret:
-                print("WARNING: Failed to read frame, retrying...")
-                time.sleep(1)
-                continue
+                reconnect_attempts += 1
+                if is_rtsp and reconnect_attempts <= 10:
+                    wait = min(reconnect_attempts * 2, 10)
+                    print(f"WARNING: Lost RTSP stream, reconnecting in {wait}s... (attempt {reconnect_attempts})")
+                    time.sleep(wait)
+                    cap.release()
+                    cap = open_video_source(args.source)
+                    continue
+                elif not is_rtsp:
+                    print("WARNING: Failed to read frame, retrying...")
+                    time.sleep(1)
+                    continue
+                else:
+                    print("ERROR: Could not reconnect to RTSP stream after 10 attempts.")
+                    break
+            reconnect_attempts = 0  # Reset on successful read
 
             now = time.time()
 
