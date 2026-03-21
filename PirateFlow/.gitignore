@@ -31,8 +31,10 @@ __pycache__/
 *.pyd
 .Python
 *.egg-info/
-dist/
 build/
+
+# Database
+*.db
 
 # Environment variables
 .env
