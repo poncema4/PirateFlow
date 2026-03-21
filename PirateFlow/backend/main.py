@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from middleware.errors import install_error_handlers
-from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo
+from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access
 
 load_dotenv()
 
@@ -58,6 +58,7 @@ app.include_router(analytics.router)
 app.include_router(ai.router)
 app.include_router(websocket.router)
 app.include_router(demo.router)
+app.include_router(face_access.router)
 
 
 # --- Health Check ---

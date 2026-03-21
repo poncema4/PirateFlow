@@ -19,9 +19,10 @@ Role 1 integration:
     verify function and _get_user_from_db() to query the real database.
 """
 
+import os
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
@@ -141,3 +142,23 @@ def require_role(minimum_role: UserRole):
         return user
 
     return _check_role
+
+
+# ---------------------------------------------------------------------------
+# Camera API key auth (for face verify endpoint)
+# ---------------------------------------------------------------------------
+
+async def require_camera_key(
+    x_camera_key: Optional[str] = Header(None),
+) -> None:
+    """
+    Validates the camera API key from the X-Camera-Key header.
+    Used by the face verify endpoint -- cameras are trusted devices,
+    not user sessions, so they use a simple API key instead of JWT.
+    """
+    expected = os.getenv("CAMERA_API_KEY", "dev-camera-key")
+    if not x_camera_key or x_camera_key != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing camera API key",
+        )
