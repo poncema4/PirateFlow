@@ -1,5 +1,8 @@
 .env
 *.db
+*.db-shm
+*.db-wal
+PirateFlow/backend/faces/
 __pycache__/
 node_modules/
 venv/

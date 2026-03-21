@@ -22,10 +22,16 @@ STATIC_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize DB, enable WAL mode, etc.
+    # Startup: initialize DB, seed data
+    from services.database import init_db, close_db
+    from services.seed import seed_database
+
     print("PirateFlow API starting up...")
+    await init_db()
+    await seed_database()
     yield
     # Shutdown
+    await close_db()
     print("PirateFlow API shutting down...")
 
 

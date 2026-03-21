@@ -2,40 +2,47 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from middleware.auth import UserPayload, get_current_user
+from middleware.auth import get_current_user
 from models.schemas import BuildingOut, FloorOut
+from services.database import get_db
+from services.queries import get_all_buildings, get_building_by_id
 
 router = APIRouter(prefix="/api/buildings", tags=["buildings"], dependencies=[Depends(get_current_user)])
-
-# Stub data matching SHU campus
-STUB_BUILDINGS = [
-    BuildingOut(id="bld_001", name="Jubilee Hall", code="JUB", address="400 South Orange Ave", total_floors=4, room_count=22, current_occupancy_pct=0.45),
-    BuildingOut(id="bld_002", name="McNulty Hall", code="MCN", address="400 South Orange Ave", total_floors=4, room_count=25, current_occupancy_pct=0.62),
-    BuildingOut(id="bld_003", name="Corrigan Hall", code="COR", address="400 South Orange Ave", total_floors=3, room_count=15, current_occupancy_pct=0.38),
-    BuildingOut(id="bld_004", name="Walsh Library", code="WAL", address="400 South Orange Ave", total_floors=5, room_count=30, current_occupancy_pct=0.71),
-    BuildingOut(id="bld_005", name="University Center", code="UC", address="400 South Orange Ave", total_floors=3, room_count=20, current_occupancy_pct=0.29),
-    BuildingOut(id="bld_006", name="Stafford Place", code="STP", address="400 South Orange Ave", total_floors=3, room_count=18, current_occupancy_pct=0.55),
-]
 
 
 @router.get("", response_model=list[BuildingOut])
 async def list_buildings():
     """Return all buildings with summary stats."""
-    # TODO: replace with DB query
-    return STUB_BUILDINGS
+    db = await get_db()
+    rows = await get_all_buildings(db)
+    return [BuildingOut(**r) for r in rows]
 
 
 @router.get("/{building_id}", response_model=dict)
 async def get_building(building_id: str):
     """Return building detail with floors and room summaries."""
-    # TODO: replace with DB query
-    building = next((b for b in STUB_BUILDINGS if b.id == building_id), None)
-    if not building:
+    db = await get_db()
+    result = await get_building_by_id(db, building_id)
+    if not result:
         raise HTTPException(status_code=404, detail="Building not found")
 
-    floors = [
-        FloorOut(id=f"flr_{building_id}_{i}", building_id=building_id, floor_number=i, name=f"Floor {i}", room_count=building.room_count // building.total_floors)
-        for i in range(1, building.total_floors + 1)
+    building = result["building"]
+    floors = result["floors"]
+
+    building_out = BuildingOut(
+        id=building["id"], name=building["name"], code=building["code"],
+        address=building["address"], total_floors=building["total_floors"],
+        room_count=len(result["rooms"]),
+        current_occupancy_pct=0.0,
+    )
+
+    floors_out = [
+        FloorOut(
+            id=f["id"], building_id=f["building_id"],
+            floor_number=f["floor_number"], name=f["name"],
+            room_count=sum(1 for r in result["rooms"] if r["floor_id"] == f["id"]),
+        )
+        for f in floors
     ]
 
-    return {"building": building, "floors": floors}
+    return {"building": building_out, "floors": floors_out}

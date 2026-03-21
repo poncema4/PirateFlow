@@ -97,6 +97,9 @@ class UserOut(BaseModel):
     last_name: str
     role: UserRole
     department: Optional[str] = None
+    major: Optional[str] = None
+    year: Optional[str] = None
+    student_id: Optional[str] = None
 
 
 class LoginResponse(BaseModel):
