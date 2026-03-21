@@ -66,7 +66,7 @@ async def student_lookup(body: StudentLookupRequest, _: None = Depends(rate_limi
 
     role = student["role"]
     return LoginResponse(
-        access_token=_ROLE_TO_TOKEN[role],
+        access_token=create_access_token(student["id"], student["email"], role),
         refresh_token="stub-refresh-token",
         user=UserOut(
             id=student["id"],
