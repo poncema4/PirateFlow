@@ -165,26 +165,32 @@ def _extract_encoding(image_bytes: bytes, use_cnn: bool = True) -> Optional[np.n
     return encodings[0]
 
 
-def _extract_encoding_from_pil(image: Image.Image) -> Optional[np.ndarray]:
-    """Extract face encoding directly from a PIL Image."""
+def _extract_encoding_from_pil(image: Image.Image, fast: bool = False) -> Optional[np.ndarray]:
+    """Extract face encoding directly from a PIL Image.
+    fast=True uses HOG + fewer jitters for registration speed.
+    """
     rgb_array = _pil_to_array(image)
+    model = "hog" if fast else DETECTION_MODEL
+    jitters = 1 if fast else NUM_JITTERS
 
     try:
-        face_locations = face_recognition.face_locations(rgb_array, model=DETECTION_MODEL)
+        face_locations = face_recognition.face_locations(rgb_array, model=model)
     except Exception:
         face_locations = face_recognition.face_locations(rgb_array, model="hog")
 
     if not face_locations:
         return None
 
-    encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=NUM_JITTERS)
+    encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=jitters)
     if not encodings:
         return None
     return encodings[0]
 
 
 def _extract_encoding_webcam(image_bytes: bytes) -> Optional[np.ndarray]:
-    """Extract face encoding from a webcam frame with preprocessing."""
+    """Extract face encoding from a webcam/RTSP frame with preprocessing.
+    Uses HOG for speed -- verification needs to be fast for live feeds.
+    """
     try:
         pil_image = _bytes_to_pil(image_bytes)
         pil_image = _normalize_frame(pil_image)
@@ -192,15 +198,11 @@ def _extract_encoding_webcam(image_bytes: bytes) -> Optional[np.ndarray]:
     except Exception:
         return None
 
-    try:
-        face_locations = face_recognition.face_locations(rgb_array, model=DETECTION_MODEL)
-    except Exception:
-        face_locations = face_recognition.face_locations(rgb_array, model="hog")
-
+    face_locations = face_recognition.face_locations(rgb_array, model="hog")
     if not face_locations:
         return None
 
-    encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=NUM_JITTERS)
+    encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=1)
     if not encodings:
         return None
     return encodings[0]
@@ -217,13 +219,17 @@ def _register_with_augmentation(image_bytes: bytes) -> list[np.ndarray]:
         return []
 
     augmented_images = _generate_augmented_images(pil_image)
+    total = len(augmented_images)
     encodings = []
 
-    for aug_image in augmented_images:
-        encoding = _extract_encoding_from_pil(aug_image)
+    print(f"[face_service] Processing {total} augmented images...")
+    for i, aug_image in enumerate(augmented_images, 1):
+        print(f"[face_service]   Encoding {i}/{total}...", flush=True)
+        encoding = _extract_encoding_from_pil(aug_image, fast=True)
         if encoding is not None:
             encodings.append(encoding)
 
+    print(f"[face_service] Done: {len(encodings)}/{total} encodings extracted")
     return encodings
 
 

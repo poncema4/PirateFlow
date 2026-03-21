@@ -44,7 +44,7 @@ def main():
         url,
         json={"image_base64": b64},
         headers={"Authorization": f"Bearer {args.token}"},
-        timeout=30,
+        timeout=120,
     )
 
     if resp.status_code == 200:
