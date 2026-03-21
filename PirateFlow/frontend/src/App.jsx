@@ -1,15 +1,21 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, createContext, useContext } from "react";
 import { WebSocketProvider } from "./context/WebSocketContext";
+import { tokenStorage } from "./api/client";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Revenue from "./pages/Revenue";
 import Alerts from "./pages/Alerts";
+import Login from "./pages/Login";
+import Spaces from "./pages/Spaces";
+import BuildingDetail from "./pages/BuildingDetail";
+import RoomDetail from "./pages/RoomDetail";
+import CreateBooking from "./pages/CreateBooking";
+import MyBookings from "./pages/MyBookings";
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
-// Exported so Role 4 can import useAuth() in their login page and call login()
 export const AuthContext = createContext(null);
 
 export function useAuth() {
@@ -18,22 +24,33 @@ export function useAuth() {
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const saved = sessionStorage.getItem("pf_user");
+    const saved = localStorage.getItem("pf_user");
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = (userData) => {
-    sessionStorage.setItem("pf_user", JSON.stringify(userData));
-    setUser(userData);
+  // userData: { id?, email, first_name?, last_name?, role, name? }
+  // tokens:   { access_token, refresh_token } (optional — omit for temp/stub login)
+  const login = (userData, tokens) => {
+    // Normalize: ensure `name` field exists for Sidebar/Header display
+    const normalized = {
+      ...userData,
+      name: userData.name ?? (`${userData.first_name ?? ""} ${userData.last_name ?? ""}`.trim() || userData.email),
+    };
+    if (tokens) tokenStorage.set(tokens.access_token, tokens.refresh_token);
+    localStorage.setItem("pf_user", JSON.stringify(normalized));
+    setUser(normalized);
   };
 
   const logout = () => {
-    sessionStorage.removeItem("pf_user");
+    tokenStorage.clear();
     setUser(null);
   };
 
+  const isAuthenticated = !!user;
+  const isAdmin = user?.role === "admin";
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -55,64 +72,6 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// ─── Temp Login Page ──────────────────────────────────────────────────────────
-// Role 4 will replace this with the real login page.
-// They just need to import useAuth() and call login({ name, role }) on submit.
-function TempLogin() {
-  const { user, login } = useAuth();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/dashboard";
-
-  // Already logged in — redirect away
-  if (user) {
-    return <Navigate to={user.role === "admin" ? "/dashboard" : "/spaces"} replace />;
-  }
-
-  const handleLogin = (role) => {
-    login({ name: role === "admin" ? "Admin User" : "Student User", role });
-    window.location.href = role === "admin" ? from : "/spaces";
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}>
-      <div
-        className="rounded-xl p-8 flex flex-col gap-4 items-center"
-        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", width: 320 }}
-      >
-        <span style={{ fontSize: 36 }}>🏴‍☠️</span>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--accent)", fontWeight: 700 }}>
-          PirateFlow
-        </p>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center" }}>
-          Campus Space Intelligence — Seton Hall University
-        </p>
-        <div className="w-full flex flex-col gap-2 mt-2">
-          <button
-            onClick={() => handleLogin("admin")}
-            className="w-full py-2.5 rounded-lg font-semibold transition-all"
-            style={{ background: "var(--accent)", color: "#000", border: "none", cursor: "pointer", fontSize: 14 }}
-            onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
-            onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-          >
-            Login as Admin
-          </button>
-          <button
-            onClick={() => handleLogin("student")}
-            className="w-full py-2.5 rounded-lg font-semibold transition-all"
-            style={{ background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", cursor: "pointer", fontSize: 14 }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
-            onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-          >
-            Login as Student
-          </button>
-        </div>
-        <p style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center" }}>
-          Temp login — Role 4 will replace this
-        </p>
-      </div>
-    </div>
-  );
-}
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 function Layout({ children, alertCount }) {
@@ -139,7 +98,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {/* Public */}
-            <Route path="/login" element={<TempLogin />} />
+            <Route path="/login" element={<Login />} />
 
             {/* Admin-only */}
             <Route path="/dashboard" element={
@@ -163,19 +122,30 @@ export default function App() {
               </AdminRoute>
             } />
 
-            {/* Student + Admin routes — Role 4 owns these pages */}
+            {/* ── Role 4: Student + Staff routes ─────────────────────────── */}
             <Route path="/spaces" element={
               <ProtectedRoute>
-                <Layout alertCount={alertCount}>
-                  <div className="p-6" style={{ color: "var(--text-muted)" }}>Spaces — Role 4</div>
-                </Layout>
+                <Layout alertCount={alertCount}><Spaces /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/spaces/:buildingId" element={
+              <ProtectedRoute>
+                <Layout alertCount={alertCount}><BuildingDetail /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/spaces/:buildingId/:roomId" element={
+              <ProtectedRoute>
+                <Layout alertCount={alertCount}><RoomDetail /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/bookings/new" element={
+              <ProtectedRoute>
+                <Layout alertCount={alertCount}><CreateBooking /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/bookings" element={
               <ProtectedRoute>
-                <Layout alertCount={alertCount}>
-                  <div className="p-6" style={{ color: "var(--text-muted)" }}>Bookings — Role 4</div>
-                </Layout>
+                <Layout alertCount={alertCount}><MyBookings /></Layout>
               </ProtectedRoute>
             } />
 
