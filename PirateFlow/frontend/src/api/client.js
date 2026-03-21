@@ -51,6 +51,7 @@ apiClient.interceptors.response.use(
 
       isRefreshing = true;
       try {
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         const { data } = await axios.post("/api/auth/refresh", {
 =======
@@ -60,6 +61,9 @@ apiClient.interceptors.response.use(
           : "/api/auth/refresh";
         const { data } = await axios.post(refreshURL, {
 >>>>>>> benk-branch
+=======
+        const { data } = await axios.post("/api/auth/refresh", {
+>>>>>>> Stashed changes
           refresh_token: tokenStorage.getRefresh(),
         });
         tokenStorage.set(data.access_token, null);
