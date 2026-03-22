@@ -46,6 +46,7 @@ export default function TopBar() {
         <nav className="topbar-nav">
           {[
             { path: "/", label: "Browse Rooms", show: true },
+            { path: "/events", label: "Events", show: true },
             { path: "/bookings", label: "My Bookings", show: !!user },
             { path: "/dashboard", label: "Dashboard", show: user?.role === "admin" },
           ]

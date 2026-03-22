@@ -6,6 +6,7 @@ import Sidebar from "./components/common/Sidebar";
 import Header from "./components/common/Header";
 import Landing from "./pages/public/Landing";
 import Login from "./pages/public/Login";
+import Events from "./pages/public/Events";
 import Dashboard from "./pages/admin/Dashboard";
 import Analytics from "./pages/admin/Analytics";
 import Revenue from "./pages/admin/Revenue";
@@ -74,6 +75,7 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
             <Route path="/spaces/:buildingId" element={<PublicLayout><BuildingDetail /></PublicLayout>} />
             <Route path="/spaces" element={<Navigate to="/" replace />} />
 
