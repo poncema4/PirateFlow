@@ -102,12 +102,8 @@ export default function App() {
             <Route path="/bookings" element={
               <ProtectedRoute><BookingLayout><MyBookings /></BookingLayout></ProtectedRoute>
             } />
-            <Route path="/face/register" element={
-              <ProtectedRoute><BookingLayout><FaceRegister /></BookingLayout></ProtectedRoute>
-            } />
-            <Route path="/face/verify" element={
-              <ProtectedRoute><BookingLayout><FaceVerify /></BookingLayout></ProtectedRoute>
-            } />
+            <Route path="/face/register" element={<AdminRoute><AdminLayout><FaceRegister /></AdminLayout></AdminRoute>} />
+            <Route path="/face/verify" element={<AdminRoute><AdminLayout><FaceVerify /></AdminLayout></AdminRoute>} />
 
             {/* Admin */}
             <Route path="/dashboard" element={<AdminRoute><AdminLayout><Dashboard /></AdminLayout></AdminRoute>} />

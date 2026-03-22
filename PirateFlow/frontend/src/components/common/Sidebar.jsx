@@ -11,6 +11,7 @@ const adminNavItems = [
   { path: "/alerts",         label: "Alerts",          icon: "alerts" },
   { path: "/admin/users",    label: "Manage Users",    icon: "users" },
   { path: "/admin/cameras",  label: "Cameras",         icon: "cameras" },
+  { path: "/face/verify",    label: "Face Access",     icon: "cameras" },
 ];
 
 const studentNavItems = [

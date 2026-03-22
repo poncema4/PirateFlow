@@ -48,7 +48,6 @@ export default function TopBar() {
             { path: "/", label: "Browse Rooms", show: true },
             { path: "/events", label: "Events", show: true },
             { path: "/bookings", label: "My Bookings", show: !!user },
-            { path: "/face/verify", label: "Face Access", show: !!user },
             { path: "/dashboard", label: "Dashboard", show: user?.role === "admin" },
           ]
             .filter((l) => l.show)
