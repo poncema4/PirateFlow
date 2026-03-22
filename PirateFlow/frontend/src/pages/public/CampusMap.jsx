@@ -63,7 +63,7 @@ export default function CampusMap() {
         height: 52,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 20 }}>&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</span>
+          <img src="/PirateFlow.png" alt="PirateFlow" style={{ width: 28, height: 28, objectFit: "contain" }} />
           <div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: "var(--accent)", letterSpacing: "-0.5px", lineHeight: 1 }}>
               PirateFlow
