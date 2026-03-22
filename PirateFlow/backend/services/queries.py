@@ -631,10 +631,9 @@ async def create_building(db, name, code, address=None, total_floors=1,
                           latitude=None, longitude=None):
     """Insert a new building and return its ID."""
     building_id = f"bld_{uuid.uuid4().hex[:8]}"
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     await db.execute(
-        "INSERT INTO buildings VALUES (?,?,?,?,?,?,?,?)",
-        (building_id, name, code, address, total_floors, latitude, longitude, now),
+        "INSERT INTO buildings VALUES (?,?,?,?,?,?,?)",
+        (building_id, name, code, address, total_floors, latitude, longitude),
     )
     await db.commit()
     return building_id
