@@ -62,21 +62,19 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
 
   if (loading) {
     return (
-      <div style={{ gridColumn: "1 / -1", padding: 16, background: "var(--bg-primary)", borderRadius: 10, border: "1px solid var(--border)" }}>
-        <div className="animate-pulse flex flex-col gap-3">
-          <div style={{ height: 18, width: "40%", background: "var(--bg-card)", borderRadius: 6 }} />
-          <div style={{ height: 44, background: "var(--bg-card)", borderRadius: 6 }} />
-          <div style={{ height: 14, width: "60%", background: "var(--bg-card)", borderRadius: 6 }} />
-        </div>
+      <div className="room-panel">
+        <div className="skeleton" style={{ height: 18, width: "40%" }} />
+        <div className="skeleton" style={{ height: 44 }} />
+        <div className="skeleton" style={{ height: 14, width: "60%" }} />
       </div>
     );
   }
 
   if (error || !room) {
     return (
-      <div style={{ gridColumn: "1 / -1", padding: 16, background: "var(--bg-primary)", borderRadius: 10, border: "1px solid var(--border)", textAlign: "center" }}>
-        <p style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>{error || "Room not found"}</p>
-        <button onClick={onClose} style={{ fontSize: 11, color: "var(--text-muted)", background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 12px", cursor: "pointer" }}>
+      <div className="room-panel">
+        <p className="alert-danger">{error || "Room not found"}</p>
+        <button onClick={onClose} className="btn btn-secondary btn-sm">
           Close
         </button>
       </div>
@@ -84,73 +82,50 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
   }
 
   return (
-    <div
-      style={{
-        gridColumn: "1 / -1",
-        background: "var(--bg-primary)",
-        border: `1px solid ${status.color}25`,
-        borderRadius: 10,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-        animation: "slideDown 200ms ease-out",
-      }}
-    >
+    <div className="room-panel">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
-              {room.name}
-            </h3>
-            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, background: status.color + "18", color: status.color, border: `1px solid ${status.color}30`, fontWeight: 600 }}>
+      <div className="room-panel-header">
+        <div>
+          <div className="room-panel-title">
+            <h3>{room.name}</h3>
+            <span className="status-badge" style={{ color: status.color, background: status.color + "18", borderColor: status.color + "30" }}>
               {status.label}
             </span>
           </div>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3 }}>
+          <p className="room-panel-subtitle">
             {room.building_name} &middot; {room.floor_name}
           </p>
         </div>
-        <button
-          onClick={onClose}
-          style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 8px", fontSize: 11, color: "var(--text-muted)", cursor: "pointer", flexShrink: 0, transition: "border-color 150ms" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
-        >
+        <button onClick={onClose} className="btn btn-secondary btn-sm">
           &times; Close
         </button>
       </div>
 
       {/* Info tags */}
-      <div className="flex flex-wrap gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          <span className="px-2 py-0.5 rounded-full text-xs" style={{ background: "var(--border)", color: "var(--text-muted)" }}>
-            {ROOM_TYPE_LABELS[room.room_type] || room.room_type}
-          </span>
-          <span className="px-2 py-0.5 rounded-full text-xs" style={{ background: "var(--border)", color: "var(--text-muted)" }}>
-            {room.capacity} people
-          </span>
-          <span className="px-2 py-0.5 rounded-full text-xs" style={{ background: "var(--border)", color: "var(--text-muted)" }}>
-            {room.hourly_rate ? `$${room.hourly_rate}/hr` : "Free"}
-          </span>
-        </div>
+      <div className="room-panel-tags">
+        <span className="room-panel-tag">
+          {ROOM_TYPE_LABELS[room.room_type] || room.room_type}
+        </span>
+        <span className="room-panel-tag">
+          {room.capacity} people
+        </span>
+        <span className="room-panel-tag">
+          {room.hourly_rate ? `$${room.hourly_rate}/hr` : "Free"}
+        </span>
         {room.equipment?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {room.equipment.map((eq) => (
-              <span key={eq} className="px-2 py-0.5 rounded text-xs" style={{ background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-                {EQUIPMENT_ICONS[eq] || "\u00B7"} {EQUIPMENT_LABELS[eq] || eq.replace(/_/g, " ")}
-              </span>
-            ))}
-          </div>
+          room.equipment.map((eq) => (
+            <span key={eq} className="room-panel-equip-tag">
+              {EQUIPMENT_ICONS[eq] || "\u00B7"} {EQUIPMENT_LABELS[eq] || eq.replace(/_/g, " ")}
+            </span>
+          ))
         )}
       </div>
 
       {/* Date controls + availability */}
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>Availability</p>
-          <div className="flex items-center gap-2">
+      <div className="room-panel-avail">
+        <div className="room-panel-avail-header">
+          <p className="room-panel-avail-label">Availability</p>
+          <div className="room-panel-avail-btns">
             {[
               { label: "Today", value: todayStr() },
               { label: "Tomorrow", value: tomorrowStr() },
@@ -158,12 +133,7 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
               <button
                 key={value}
                 onClick={() => setSelectedDate(value)}
-                style={{
-                  background: selectedDate === value ? "var(--accent-muted)" : "var(--bg-card)",
-                  color: selectedDate === value ? "var(--accent)" : "var(--text-muted)",
-                  border: `1px solid ${selectedDate === value ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
-                  borderRadius: 6, padding: "3px 8px", fontSize: 10, cursor: "pointer", transition: "all 150ms",
-                }}
+                className={`room-panel-date-btn${selectedDate === value ? " active" : ""}`}
               >
                 {label}
               </button>
@@ -173,7 +143,7 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
               value={selectedDate}
               min={todayStr()}
               onChange={(e) => setSelectedDate(e.target.value)}
-              style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 6px", fontSize: 10, color: "var(--text-muted)", outline: "none", cursor: "pointer" }}
+              className="room-panel-date-input"
             />
           </div>
         </div>
@@ -188,17 +158,17 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
       </div>
 
       {/* Selected slot + Book CTA */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="room-panel-footer">
         <div>
           {selectedSlot ? (
-            <p style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
+            <p className="room-panel-selected">
               Selected: {formatTime(selectedSlot.start)} &ndash; {formatTime(selectedSlot.end)}
-              <span style={{ color: "var(--text-muted)", fontWeight: 400, marginLeft: 6 }}>
+              <span className="room-panel-selected-date">
                 {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
               </span>
             </p>
           ) : (
-            <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
+            <p className="room-panel-hint">
               Click a time slot to select
             </p>
           )}
@@ -207,15 +177,7 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
         <button
           onClick={handleBook}
           disabled={!canBook}
-          style={{
-            background: canBook ? "var(--accent)" : "var(--border)",
-            color: canBook ? "#000" : "var(--text-muted)",
-            border: "none", borderRadius: 8, padding: "8px 20px",
-            fontSize: 12, fontWeight: 700, cursor: canBook ? "pointer" : "not-allowed",
-            transition: "opacity 150ms", flexShrink: 0,
-          }}
-          onMouseEnter={(e) => { if (canBook) e.currentTarget.style.opacity = "0.88"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+          className={`btn ${canBook ? "btn-primary" : ""}`}
         >
           Book This Room
         </button>

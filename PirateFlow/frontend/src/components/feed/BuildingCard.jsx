@@ -22,15 +22,12 @@ export default function BuildingCard({ building, onClick }) {
   const label = getStatusLabel(building.current_occupancy_pct);
 
   return (
-    <div
-      onClick={onClick}
-      className="building-card"
-    >
+    <div onClick={onClick} className="building-card">
       <div className="building-card-header">
         <div className="building-card-info">
           <div
             className="building-card-icon"
-            style={{ background: `${color}10`, color: color }}
+            style={{ background: `${color}10`, color }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="2" width="16" height="20" rx="2"/>
@@ -44,21 +41,13 @@ export default function BuildingCard({ building, onClick }) {
             </svg>
           </div>
           <div>
-            <p className="building-card-name">
-              {building.name}
-            </p>
-            <p className="building-card-meta">
-              {building.code} &middot; {building.room_count} rooms
-            </p>
+            <p className="building-card-name">{building.name}</p>
+            <p className="building-card-meta">{building.code} &middot; {building.room_count} rooms</p>
           </div>
         </div>
         <span
           className="building-card-status"
-          style={{
-            background: `${color}12`,
-            color,
-            border: `1px solid ${color}25`,
-          }}
+          style={{ background: `${color}12`, color, border: `1px solid ${color}25` }}
         >
           {label}
         </span>
@@ -74,13 +63,12 @@ export default function BuildingCard({ building, onClick }) {
           style={{
             width: `${Math.max(building.current_occupancy_pct, 2)}%`,
             background: gradient,
-            boxShadow: building.current_occupancy_pct > 0 ? `0 2px 8px ${color}40` : "none",
           }}
         />
       </div>
 
       <p className="building-card-rooms">
-        <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{building.occupied_rooms || 0}</span> of {building.room_count} rooms occupied
+        <strong>{building.occupied_rooms || 0}</strong> of {building.room_count} rooms occupied
       </p>
     </div>
   );

@@ -16,30 +16,34 @@ export default function TopBar() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 bg-shu-blue-dk border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <header className="topbar">
+      <div className="topbar-inner">
         {/* Brand */}
         <div
-          className="flex items-center gap-3 cursor-pointer group"
+          className="topbar-brand"
           onClick={() => navigate("/")}
         >
           <img
             src="/PirateFlow.png"
             alt="PirateFlow"
-            className="w-9 h-9 object-contain group-hover:scale-105 transition-transform duration-200"
+            style={{
+              width: 36,
+              height: 36,
+              objectFit: "contain",
+            }}
           />
           <div>
-            <div className="font-display text-[17px] text-white tracking-wide">
+            <div className="topbar-brand-name">
               PirateFlow
             </div>
-            <div className="text-[10px] text-white/45 tracking-widest uppercase">
+            <div className="topbar-brand-sub">
               Seton Hall University
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex items-center gap-1">
+        <nav className="topbar-nav">
           {[
             { path: "/", label: "Browse Rooms", show: true },
             { path: "/bookings", label: "My Bookings", show: !!user },
@@ -50,14 +54,7 @@ export default function TopBar() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className={`
-                  px-4 py-2 rounded-lg text-[13px] font-medium cursor-pointer
-                  transition-all duration-200 border-none font-body
-                  ${isActive(path)
-                    ? "bg-white/15 text-white"
-                    : "bg-transparent text-white/55 hover:text-white hover:bg-white/8"
-                  }
-                `}
+                className={`topbar-nav-btn ${isActive(path) ? "active" : ""}`}
               >
                 {label}
               </button>
@@ -65,22 +62,22 @@ export default function TopBar() {
         </nav>
 
         {/* User */}
-        <div className="flex items-center gap-3">
+        <div className="topbar-user">
           {user ? (
-            <div className="relative">
+            <div style={{ position: "relative" }}>
               <button
                 onClick={() => setShowUserMenu((v) => !v)}
-                className="flex items-center gap-3 cursor-pointer bg-transparent border-none"
+                className="topbar-user-btn"
               >
-                <div className="text-right hidden sm:block">
-                  <div className="text-[13px] font-semibold text-white leading-tight">
+                <div className="topbar-user-info hide-mobile">
+                  <div className="topbar-user-name">
                     {user.name}
                   </div>
-                  <div className="text-[11px] text-white/45">
+                  <div className="topbar-user-role">
                     {user.role === "admin" ? "Administrator" : "Student"}
                   </div>
                 </div>
-                <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-[13px] font-bold text-shu-blue-dk hover:scale-105 transition-transform duration-200">
+                <div className="topbar-avatar">
                   {user.name?.[0]?.toUpperCase() || "?"}
                 </div>
               </button>
@@ -88,17 +85,17 @@ export default function TopBar() {
               {showUserMenu && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="topbar-menu-overlay"
                     onClick={() => setShowUserMenu(false)}
                   />
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-border z-50 overflow-hidden animate-[slideDown_.15s_ease]">
-                    <div className="px-4 py-3 border-b border-cream-dk">
-                      <p className="text-sm font-semibold text-navy">{user.name}</p>
-                      <p className="text-xs text-muted">{user.email}</p>
+                  <div className="topbar-menu">
+                    <div className="topbar-menu-info">
+                      <p className="topbar-menu-name">{user.name}</p>
+                      <p className="topbar-menu-email">{user.email}</p>
                     </div>
                     <button
                       onClick={handleSignOut}
-                      className="w-full text-left px-4 py-2.5 text-sm text-danger hover:bg-cream transition-colors cursor-pointer border-none bg-transparent font-body"
+                      className="topbar-menu-btn"
                     >
                       Sign Out
                     </button>
@@ -109,12 +106,7 @@ export default function TopBar() {
           ) : (
             <button
               onClick={() => navigate("/login")}
-              className="
-                text-[13px] font-semibold text-white px-5 py-2 rounded-lg cursor-pointer
-                border border-white/25 bg-white/10 font-body
-                transition-all duration-200
-                hover:bg-white/20 hover:border-white/40
-              "
+              className="topbar-signin"
             >
               Sign In
             </button>

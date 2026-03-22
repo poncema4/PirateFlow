@@ -44,9 +44,9 @@ export default function StatsCard({ label, value, sub, accent = false, danger = 
   const trendArrow = trend?.direction === "up" ? "\u2191" : "\u2193";
 
   const colorMap = {
-    default: { bg: "rgba(37,99,235,.08)", border: "rgba(37,99,235,.1)", icon: "#2563eb", topBorder: "transparent" },
-    accent: { bg: "rgba(37,99,235,.08)", border: "rgba(37,99,235,.1)", icon: "#2563eb", topBorder: "#2563eb" },
-    danger: { bg: "rgba(220,38,38,.08)", border: "rgba(220,38,38,.1)", icon: "#dc2626", topBorder: "#dc2626" },
+    default: { bg: "rgba(37,99,235,.08)", icon: "#2563eb", topBorder: "transparent" },
+    accent: { bg: "rgba(37,99,235,.08)", icon: "#2563eb", topBorder: "#2563eb" },
+    danger: { bg: "rgba(220,38,38,.08)", icon: "#dc2626", topBorder: "#dc2626" },
   };
   const colors = danger ? colorMap.danger : accent ? colorMap.accent : colorMap.default;
   const valueColor = danger ? "var(--danger)" : accent ? "var(--accent)" : "var(--text-primary)";
@@ -57,9 +57,7 @@ export default function StatsCard({ label, value, sub, accent = false, danger = 
       style={{ borderTop: `3px solid ${colors.topBorder}` }}
     >
       <div className="stats-card-top">
-        <p className="stats-card-label">
-          {label}
-        </p>
+        <p className="stats-card-label">{label}</p>
         <div
           className="stats-card-icon"
           style={{ background: colors.bg, color: colors.icon }}
@@ -69,12 +67,7 @@ export default function StatsCard({ label, value, sub, accent = false, danger = 
       </div>
 
       <div className="stats-card-bottom">
-        <p
-          className="stats-card-value"
-          style={{ color: valueColor }}
-        >
-          {value}
-        </p>
+        <p className="stats-card-value" style={{ color: valueColor }}>{value}</p>
         {trend && (
           <span
             className="stats-card-trend"

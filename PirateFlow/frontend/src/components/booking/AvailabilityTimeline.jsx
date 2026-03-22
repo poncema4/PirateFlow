@@ -37,89 +37,70 @@ export default function AvailabilityTimeline({
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-2">
-        <div className="animate-pulse rounded-lg" style={{ height: 44, background: "var(--bg-card)", border: "1px solid var(--border)" }} />
-        <div className="animate-pulse rounded" style={{ height: 12, width: "60%", background: "var(--bg-card)" }} />
+      <div className="timeline-loading">
+        <div className="skeleton" />
+        <div className="skeleton" />
       </div>
     );
   }
 
   if (slots.length === 0) {
     return (
-      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No availability data for this date.</p>
+      <p className="timeline-empty">No availability data for this date.</p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="timeline-wrap">
       {/* Legend */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1">
-          <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(0,75,141,0.2)", border: "1px solid rgba(0,75,141,0.4)" }} />
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Available</span>
+      <div className="timeline-legend">
+        <div className="timeline-legend-item">
+          <div className="timeline-legend-dot" style={{ background: "rgba(0,75,141,0.2)", borderColor: "rgba(0,75,141,0.4)" }} />
+          <span className="timeline-legend-label">Available</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(232,68,90,0.3)", border: "1px solid rgba(232,68,90,0.4)" }} />
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Booked</span>
+        <div className="timeline-legend-item">
+          <div className="timeline-legend-dot" style={{ background: "rgba(232,68,90,0.3)", borderColor: "rgba(232,68,90,0.4)" }} />
+          <span className="timeline-legend-label">Booked</span>
         </div>
         {highlightRange && (
-          <div className="flex items-center gap-1">
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(0,75,141,0.55)", border: "1px solid var(--accent)" }} />
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Selected</span>
+          <div className="timeline-legend-item">
+            <div className="timeline-legend-dot" style={{ background: "rgba(0,75,141,0.55)", borderColor: "var(--accent)" }} />
+            <span className="timeline-legend-label">Selected</span>
           </div>
         )}
         {isToday && currentTimePos !== null && (
-          <div className="flex items-center gap-1">
-            <div style={{ width: 2, height: 10, background: "var(--danger)", borderRadius: 1 }} />
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Now</span>
+          <div className="timeline-legend-item">
+            <div className="timeline-legend-dot timeline-legend-dot--now" style={{ background: "var(--danger)" }} />
+            <span className="timeline-legend-label">Now</span>
           </div>
         )}
       </div>
 
       {/* Bar */}
-      <div style={{ position: "relative" }}>
-        <div
-          style={{
-            display: "flex",
-            height: 44,
-            borderRadius: 6,
-            overflow: "hidden",
-            border: "1px solid var(--border)",
-          }}
-        >
+      <div className="timeline-bar-wrap">
+        <div className="timeline-bar">
           {slots.map((slot, i) => {
             const booked = slot.status === "booked";
             const highlighted = isHighlighted(slot);
             const isAvail = slot.status === "available";
 
-            const baseBg = highlighted
-              ? "rgba(0,75,141,0.55)"
-              : booked
-              ? "rgba(232,68,90,0.25)"
-              : "rgba(0,75,141,0.07)";
+            const cls = [
+              "timeline-slot",
+              isAvail ? "available" : "",
+              booked ? "booked" : "",
+              highlighted ? "highlighted" : "",
+            ].filter(Boolean).join(" ");
 
             return (
               <div
                 key={slot.start_time}
+                className={cls}
                 title={
                   booked
                     ? `Booked  ${formatHour(slot.start_time)} \u2013 ${formatHour(slot.end_time)}`
                     : `Available  ${formatHour(slot.start_time)} \u2013 ${formatHour(slot.end_time)}`
                 }
                 onClick={() => isAvail && onSlotClick?.(slot.start_time, slot.end_time)}
-                style={{
-                  flex: 1,
-                  background: baseBg,
-                  borderRight: i < slots.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                  cursor: isAvail ? "pointer" : "default",
-                  transition: "background 100ms",
-                }}
-                onMouseEnter={(e) => {
-                  if (isAvail && !highlighted) e.currentTarget.style.background = "rgba(0,75,141,0.22)";
-                }}
-                onMouseLeave={(e) => {
-                  if (isAvail && !highlighted) e.currentTarget.style.background = baseBg;
-                }}
               />
             );
           })}
@@ -127,35 +108,20 @@ export default function AvailabilityTimeline({
 
         {/* Current-time needle */}
         {currentTimePos !== null && (
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: `${currentTimePos}%`,
-              height: "100%",
-              width: 2,
-              background: "var(--danger)",
-              borderRadius: 1,
-              zIndex: 10,
-              pointerEvents: "none",
-              boxShadow: "0 0 4px var(--danger)",
-            }}
-          />
+          <div className="timeline-now" style={{ left: `${currentTimePos}%` }} />
         )}
       </div>
 
       {/* Hour labels */}
-      <div style={{ display: "flex" }}>
+      <div className="timeline-hours">
         {slots.map((slot, i) => (
-          <div key={slot.start_time} style={{ flex: 1, textAlign: "center" }}>
+          <div key={slot.start_time} className="timeline-hour">
             {i % 2 === 0 && (
-              <span style={{ fontSize: 9, color: "var(--text-muted)" }}>
-                {formatHour(slot.start_time)}
-              </span>
+              <span>{formatHour(slot.start_time)}</span>
             )}
           </div>
         ))}
-        <span style={{ fontSize: 9, color: "var(--text-muted)", flexShrink: 0 }}>10pm</span>
+        <span className="timeline-hour timeline-hour--end">10pm</span>
       </div>
     </div>
   );

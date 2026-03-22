@@ -40,9 +40,9 @@ function ProtectedRoute({ children }) {
 // ─── Public Layout (TopBar only) ─────────────────────────────────────────────
 function PublicLayout({ children }) {
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
+    <div className="app-public">
       <TopBar />
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 32px 48px" }}>
+      <div className="app-public-content">
         {children}
       </div>
     </div>
@@ -52,11 +52,11 @@ function PublicLayout({ children }) {
 // ─── Admin Layout (Sidebar + Header) ─────────────────────────────────────────
 function AdminLayout({ children, alertCount }) {
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", overflow: "hidden" }}>
+    <div className="app-admin">
       <Sidebar alertCount={alertCount} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, width: 0 }}>
+      <div className="app-admin-body">
         <Header alertCount={alertCount} />
-        <main style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "var(--bg-primary)" }}>
+        <main className="app-admin-main">
           {children}
         </main>
       </div>

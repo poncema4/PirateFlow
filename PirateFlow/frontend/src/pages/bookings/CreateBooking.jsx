@@ -48,18 +48,12 @@ const START_TIMES = generateTimes(8, 21, 30);
 // ─── Section Wrapper ──────────────────────────────────────────────────────────
 function Section({ number, title, children }) {
   return (
-    <div
-      className="rounded-xl flex flex-col gap-3"
-      style={{ background: "var(--bg-card)", border: "1px solid var(--border)", padding: "18px 20px" }}
-    >
-      <div className="flex items-center gap-2.5">
-        <span
-          className="flex items-center justify-center rounded-full text-sm font-bold flex-shrink-0"
-          style={{ width: 26, height: 26, background: "var(--accent)", color: "#fff" }}
-        >
+    <div className="booking-section">
+      <div className="booking-section-header">
+        <span className="booking-section-number">
           {number}
         </span>
-        <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{title}</h2>
+        <h2 className="booking-section-title">{title}</h2>
       </div>
       {children}
     </div>
@@ -69,73 +63,32 @@ function Section({ number, title, children }) {
 // ─── Label + Input row ────────────────────────────────────────────────────────
 function Field({ label, children, error }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+    <div className="form-group">
+      <label className="form-label">
         {label}
       </label>
       {children}
       {error && (
-        <p style={{ fontSize: 12, color: "var(--danger)" }}>{error}</p>
+        <p className="form-error">{error}</p>
       )}
     </div>
   );
 }
 
-const inputStyle = {
-  background: "var(--bg-primary)",
-  border: "1px solid var(--border)",
-  borderRadius: 7,
-  padding: "8px 11px",
-  fontSize: 13,
-  color: "var(--text-primary)",
-  outline: "none",
-  width: "100%",
-  boxSizing: "border-box",
-  transition: "border-color 150ms",
-};
-
 // ─── Success State ────────────────────────────────────────────────────────────
 function BookingSuccess({ booking, onBookAnother }) {
   const navigate = useNavigate();
   return (
-    <div className="flex flex-col items-center gap-5 py-6 px-4" style={{ maxWidth: 480, margin: "0 auto", textAlign: "center" }}>
-      <div
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: "50%",
-          background: "rgba(0,75,141,0.15)",
-          border: "2px solid var(--accent)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 28,
-          animation: "scaleIn 0.3s ease-out",
-        }}
-      >
+    <div className="booking-success">
+      <div className="booking-success-icon">
         ✓
       </div>
       <div>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 20,
-            fontWeight: 700,
-            color: "var(--accent)",
-            marginBottom: 6,
-          }}
-        >
-          Booking Confirmed!
-        </h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          Your room has been reserved.
-        </p>
+        <h2>Booking Confirmed!</h2>
+        <p>Your room has been reserved.</p>
       </div>
 
-      <div
-        className="w-full rounded-xl flex flex-col gap-2.5 text-left"
-        style={{ background: "var(--bg-card)", border: "1px solid rgba(0,75,141,0.25)", padding: "16px 18px" }}
-      >
+      <div className="summary-card">
         <Row label="Room"     value={booking.room_name} />
         <Row label="Building" value={booking.building_name} />
         <Row
@@ -153,56 +106,29 @@ function BookingSuccess({ booking, onBookAnother }) {
         />
       </div>
 
-      <div className="flex gap-3 w-full">
+      <div className="booking-success-actions">
         <button
+          className="btn btn-primary"
           onClick={() => navigate("/bookings")}
-          style={{
-            flex: 1,
-            background: "var(--accent)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 7,
-            padding: "10px 0",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "opacity 150ms",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.88"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
         >
           View My Bookings
         </button>
         <button
+          className="btn btn-secondary"
           onClick={onBookAnother}
-          style={{
-            flex: 1,
-            background: "transparent",
-            color: "var(--text-muted)",
-            border: "1px solid var(--border)",
-            borderRadius: 7,
-            padding: "10px 0",
-            fontSize: 13,
-            cursor: "pointer",
-            transition: "border-color 150ms",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
         >
           Book Another Room
         </button>
       </div>
-
-      <style>{`@keyframes scaleIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }`}</style>
     </div>
   );
 }
 
 function Row({ label, value }) {
   return (
-    <div className="flex justify-between gap-3">
-      <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 12, color: "var(--text-primary)", textAlign: "right" }}>{value}</span>
+    <div className="summary-row">
+      <span className="summary-row-label">{label}</span>
+      <span className="summary-row-value">{value}</span>
     </div>
   );
 }
@@ -352,7 +278,7 @@ export default function CreateBooking() {
   // ── Success state ──────────────────────────────────────────────────────────
   if (confirmedBooking) {
     return (
-      <div style={{ maxWidth: 820, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="booking-page">
         <BookingSuccess
           booking={confirmedBooking}
           onBookAnother={() => navigate("/")}
@@ -363,16 +289,11 @@ export default function CreateBooking() {
 
   // ── Main form ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-4" style={{ maxWidth: 720, margin: "0 auto", padding: "20px 24px" }}>
+    <div className="booking-page">
 
       {/* Breadcrumb */}
       <nav>
-        <Link
-          to="/"
-          style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", transition: "color 150ms" }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
-        >
+        <Link to="/" className="breadcrumb">
           ← Campus Spaces
         </Link>
       </nav>
@@ -380,43 +301,36 @@ export default function CreateBooking() {
       {/* ── Section 1: Room ─────────────────────────────────────────────────── */}
       <Section number="1" title="Select Room">
         {roomId && roomInfo ? (
-          <div
-            className="rounded-lg flex items-start justify-between gap-3"
-            style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", padding: "12px 14px" }}
-          >
-            <div className="flex flex-col gap-0.5">
-              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+          <div className="booking-room-info">
+            <div>
+              <p className="booking-room-name">
                 {roomInfo.name}
               </p>
-              <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              <p className="booking-room-meta">
                 {roomInfo.building_name} · {roomInfo.floor_name} · {ROOM_TYPE_LABELS[roomInfo.room_type] || roomInfo.room_type} · {roomInfo.capacity} people
               </p>
               {roomInfo.hourly_rate && (
-                <p style={{ fontSize: 11, color: "var(--text-muted)" }}>${roomInfo.hourly_rate}/hr</p>
+                <p className="booking-room-meta">${roomInfo.hourly_rate}/hr</p>
               )}
             </div>
             <button
+              className="btn btn-secondary btn-sm"
               onClick={() => { setRoomId(""); setRoomInfo(null); setSlots([]); setStartTime(""); setEndTime(""); }}
-              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 5, padding: "3px 9px", fontSize: 11, color: "var(--text-muted)", cursor: "pointer", flexShrink: 0, transition: "border-color 150ms" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
             >
               Change
             </button>
           </div>
         ) : roomId && roomLoading ? (
-          <div className="animate-pulse rounded-lg" style={{ height: 60, background: "var(--bg-primary)" }} />
+          <div className="skeleton" />
         ) : (
           <Field label="Room" error={errors.room}>
             {roomsLoading ? (
-              <div className="animate-pulse rounded-lg" style={{ height: 36, background: "var(--bg-primary)" }} />
+              <div className="skeleton" />
             ) : (
               <select
+                className="form-select"
                 value={roomId}
                 onChange={(e) => { setRoomId(e.target.value); setErrors((p) => ({ ...p, room: "" })); }}
-                style={{ ...inputStyle, cursor: "pointer" }}
-                onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-                onBlur={(e)  => { e.target.style.borderColor = "var(--border)"; }}
               >
                 <option value="">— Select a room —</option>
                 {allRooms.map((r) => (
@@ -434,24 +348,20 @@ export default function CreateBooking() {
       <Section number="2" title="Date & Time">
         <Field label="Date" error={errors.date}>
           <input
+            className="form-input"
             type="date"
             value={date}
             min={todayStr()}
             onChange={(e) => { setDate(e.target.value); setErrors((p) => ({ ...p, date: "" })); }}
-            style={inputStyle}
-            onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-            onBlur={(e)  => { e.target.style.borderColor = "var(--border)"; }}
           />
         </Field>
 
-        <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <div className="form-row">
           <Field label="Start Time" error={errors.startTime}>
             <select
+              className="form-select"
               value={startTime}
               onChange={(e) => { setStartTime(e.target.value); setEndTime(""); setErrors((p) => ({ ...p, startTime: "", conflict: "" })); }}
-              style={{ ...inputStyle, cursor: "pointer" }}
-              onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-              onBlur={(e)  => { e.target.style.borderColor = "var(--border)"; }}
             >
               <option value="">— Select —</option>
               {START_TIMES.map((t) => (
@@ -462,12 +372,10 @@ export default function CreateBooking() {
 
           <Field label="End Time" error={errors.endTime}>
             <select
+              className="form-select"
               value={endTime}
               disabled={!startTime}
               onChange={(e) => { setEndTime(e.target.value); setErrors((p) => ({ ...p, endTime: "", conflict: "" })); }}
-              style={{ ...inputStyle, cursor: startTime ? "pointer" : "not-allowed", opacity: startTime ? 1 : 0.5 }}
-              onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-              onBlur={(e)  => { e.target.style.borderColor = "var(--border)"; }}
             >
               <option value="">— Select —</option>
               {endTimes.map((t) => (
@@ -480,20 +388,15 @@ export default function CreateBooking() {
         </div>
 
         {(hasConflict || errors.conflict) && (
-          <div
-            className="rounded-lg flex items-center gap-2"
-            style={{ background: "rgba(232,68,90,0.08)", border: "1px solid rgba(232,68,90,0.25)", padding: "10px 14px" }}
-          >
-            <span style={{ color: "var(--danger)", fontSize: 13 }}>⚠</span>
-            <p style={{ fontSize: 12, color: "var(--danger)" }}>
-              This time overlaps an existing booking. Please choose a different time.
-            </p>
+          <div className="alert-danger">
+            <span>⚠</span>
+            <p>This time overlaps an existing booking. Please choose a different time.</p>
           </div>
         )}
 
         {roomId && (
-          <div className="flex flex-col gap-1.5">
-            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div className="form-group">
+            <p className="form-label">
               Availability
             </p>
             <AvailabilityTimeline
@@ -510,25 +413,21 @@ export default function CreateBooking() {
       <Section number="3" title="Details">
         <Field label="Title / Purpose" error={errors.title}>
           <input
+            className="form-input"
             type="text"
             value={title}
             onChange={(e) => { setTitle(e.target.value); setErrors((p) => ({ ...p, title: "" })); }}
             placeholder="e.g. CS 101 Study Group"
             maxLength={100}
-            style={inputStyle}
-            onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-            onBlur={(e)  => { e.target.style.borderColor = "var(--border)"; }}
           />
         </Field>
 
         {!isStudent && (
           <Field label="Booking Type">
             <select
+              className="form-select"
               value={bookingType}
               onChange={(e) => setBookingType(e.target.value)}
-              style={{ ...inputStyle, cursor: "pointer" }}
-              onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-              onBlur={(e)  => { e.target.style.borderColor = "var(--border)"; }}
             >
               {BOOKING_TYPE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -540,66 +439,29 @@ export default function CreateBooking() {
 
       {/* ── Section 4: Confirm ───────────────────────────────────────────────── */}
       <Section number="4" title="Confirm">
-        <div
-          className="rounded-lg flex flex-col gap-2"
-          style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", padding: "12px 14px" }}
-        >
+        <div className="summary-card">
           <Row label="Room"   value={roomInfo?.name || (roomId ? "Loading..." : "Not selected")} />
           <Row label="Date"   value={date ? formatDate(date) : "Not selected"} />
           <Row label="Time"   value={startTime && endTime ? `${formatTime(startTime)} – ${formatTime(endTime)}` : "Not selected"} />
-          <Row label="Title"  value={title.trim() || <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Not entered</span>} />
+          <Row label="Title"  value={title.trim() || <span className="form-hint">Not entered</span>} />
           {!isStudent && <Row label="Type" value={BOOKING_TYPE_OPTIONS.find((o) => o.value === bookingType)?.label || bookingType} />}
         </div>
 
         {submitError && (
-          <div
-            className="rounded-lg"
-            style={{ background: "rgba(232,68,90,0.08)", border: "1px solid rgba(232,68,90,0.25)", padding: "10px 14px" }}
-          >
-            <p style={{ fontSize: 12, color: "var(--danger)" }}>{submitError}</p>
+          <div className="alert-danger">
+            <p>{submitError}</p>
           </div>
         )}
 
         <button
+          className="booking-confirm-btn"
           onClick={handleSubmit}
           disabled={submitting}
-          style={{
-            background: submitting ? "var(--border)" : "var(--accent)",
-            color: submitting ? "var(--text-muted)" : "#000",
-            border: "none",
-            borderRadius: 8,
-            padding: "11px 0",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: submitting ? "not-allowed" : "pointer",
-            width: "100%",
-            transition: "opacity 150ms, background 150ms",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-          }}
-          onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.opacity = "0.88"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
         >
-          {submitting && (
-            <span
-              style={{
-                width: 14,
-                height: 14,
-                border: "2px solid rgba(0,0,0,0.3)",
-                borderTopColor: "#000",
-                borderRadius: "50%",
-                display: "inline-block",
-                animation: "spin 0.7s linear infinite",
-              }}
-            />
-          )}
+          {submitting && <span className="spinner" />}
           {submitting ? "Confirming..." : "Confirm Booking"}
         </button>
       </Section>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

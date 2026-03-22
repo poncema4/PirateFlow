@@ -64,14 +64,7 @@ function isCancelled(booking) {
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function CardSkeleton() {
   return (
-    <div
-      className="rounded-xl animate-pulse"
-      style={{
-        height: 100,
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-      }}
-    />
+    <div className="skeleton" />
   );
 }
 
@@ -80,8 +73,8 @@ function StatusBadge({ status }) {
   const s = STATUS_STYLES[status] ?? STATUS_STYLES.completed;
   return (
     <span
-      className="rounded-full text-xs font-semibold flex-shrink-0"
-      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: "2px 8px" }}
+      className="status-badge"
+      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color }}
     >
       {s.label}
     </span>
@@ -94,33 +87,14 @@ function BookingCard({ booking, onCancel, cancelling }) {
   const upcoming = isUpcoming(booking);
 
   return (
-    <div
-      className="rounded-xl flex flex-col gap-2.5"
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        padding: "14px 16px",
-        transition: "border-color 150ms",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(0,75,141,0.25)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
-    >
+    <div className="booking-card">
       {/* Top row: title + status badge */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "var(--text-primary)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+      <div className="booking-card-top">
+        <div>
+          <p className="booking-card-title">
             {booking.title}
           </p>
-          <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          <p className="booking-card-room">
             {booking.room_name} · {booking.building_name}
           </p>
         </div>
@@ -128,71 +102,34 @@ function BookingCard({ booking, onCancel, cancelling }) {
       </div>
 
       {/* Date / time / type row */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span
-          className="rounded-md text-xs flex-shrink-0"
-          style={{ background: "var(--bg-primary)", color: "var(--text-muted)", border: "1px solid var(--border)", padding: "4px 10px" }}
-        >
+      <div className="booking-card-details">
+        <span className="booking-card-date">
           {formatDate(booking.start_time)}
         </span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
+        <span className="booking-card-time">
           {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
         </span>
-        <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
+        <span className="booking-card-type">
           {BOOKING_TYPE_LABELS[booking.booking_type] || booking.booking_type}
         </span>
       </div>
 
       {/* Actions */}
       {upcoming && (
-        <div className="flex items-center gap-2 pt-0.5">
+        <div className="booking-card-actions">
           <button
+            className="booking-action-btn"
             onClick={() =>
               navigate(`/bookings/new?roomId=${booking.room_id}&roomName=${encodeURIComponent(booking.room_name)}`)
             }
-            style={{
-              background: "transparent",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "5px 12px",
-              fontSize: 11,
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              transition: "border-color 150ms, color 150ms",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--accent)";
-              e.currentTarget.style.color = "var(--accent)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.color = "var(--text-muted)";
-            }}
           >
             Book Again
           </button>
 
           <button
+            className="booking-action-btn danger"
             onClick={() => onCancel(booking)}
             disabled={cancelling === booking.id}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(232,68,90,0.3)",
-              borderRadius: 6,
-              padding: "5px 12px",
-              fontSize: 11,
-              color: "var(--danger)",
-              cursor: cancelling === booking.id ? "not-allowed" : "pointer",
-              opacity: cancelling === booking.id ? 0.5 : 1,
-              transition: "border-color 150ms, opacity 150ms",
-            }}
-            onMouseEnter={(e) => {
-              if (cancelling !== booking.id)
-                e.currentTarget.style.borderColor = "var(--danger)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(232,68,90,0.3)";
-            }}
           >
             {cancelling === booking.id ? "Cancelling..." : "Cancel Booking"}
           </button>
@@ -201,29 +138,12 @@ function BookingCard({ booking, onCancel, cancelling }) {
 
       {/* Past: "Book Again" button */}
       {isPast(booking) && (
-        <div className="flex items-center gap-2 pt-0.5">
+        <div className="booking-card-actions">
           <button
+            className="booking-action-btn"
             onClick={() =>
               navigate(`/bookings/new?roomId=${booking.room_id}&roomName=${encodeURIComponent(booking.room_name)}`)
             }
-            style={{
-              background: "transparent",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "5px 12px",
-              fontSize: 11,
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              transition: "border-color 150ms, color 150ms",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--accent)";
-              e.currentTarget.style.color = "var(--accent)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.color = "var(--text-muted)";
-            }}
           >
             Book Again
           </button>
@@ -243,31 +163,12 @@ function EmptyState({ tab }) {
   const { icon, heading, sub } = msgs[tab] ?? msgs.upcoming;
 
   return (
-    <div
-      className="flex flex-col items-center gap-2.5 py-14"
-      style={{ color: "var(--text-muted)", textAlign: "center" }}
-    >
-      <p style={{ fontSize: 32, lineHeight: 1 }}>{icon}</p>
-      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{heading}</p>
-      <p style={{ fontSize: 12 }}>{sub}</p>
+    <div className="empty-state">
+      <p>{icon}</p>
+      <h3>{heading}</h3>
+      <p>{sub}</p>
       {tab === "upcoming" && (
-        <Link
-          to="/"
-          style={{
-            marginTop: 6,
-            display: "inline-block",
-            background: "var(--accent)",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: 12,
-            padding: "8px 18px",
-            borderRadius: 7,
-            textDecoration: "none",
-            transition: "opacity 150ms",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.88"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
-        >
+        <Link to="/" className="btn btn-primary">
           Browse Spaces
         </Link>
       )}
@@ -279,105 +180,52 @@ function EmptyState({ tab }) {
 function CancelDialog({ booking, onConfirm, onClose, loading }) {
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.65)", zIndex: 100, padding: 16 }}
+      className="modal-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="rounded-2xl flex flex-col gap-3.5"
-        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", maxWidth: 380, width: "100%", padding: "22px 24px" }}
-      >
+      <div className="modal-card">
         <div>
-          <h3
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 17,
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              marginBottom: 4,
-            }}
-          >
+          <h3 className="modal-title">
             Cancel Booking?
           </h3>
-          <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
+          <p>
             Are you sure you want to cancel{" "}
-            <strong style={{ color: "var(--text-primary)" }}>{booking.title}</strong> on{" "}
+            <strong>{booking.title}</strong> on{" "}
             {formatDateLong(booking.start_time)}?
           </p>
         </div>
 
-        <div
-          className="rounded-lg flex flex-col gap-1"
-          style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", padding: "10px 12px" }}
-        >
-          <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {booking.room_name} · {booking.building_name}
-          </p>
-          <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
-          </p>
+        <div className="summary-card">
+          <div className="summary-row">
+            <span className="summary-row-label">
+              {booking.room_name} · {booking.building_name}
+            </span>
+          </div>
+          <div className="summary-row">
+            <span className="summary-row-label">
+              {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
+            </span>
+          </div>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="modal-actions">
           <button
+            className="btn btn-secondary btn-block"
             onClick={onClose}
             disabled={loading}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "1px solid var(--border)",
-              borderRadius: 7,
-              padding: "9px 0",
-              fontSize: 13,
-              color: "var(--text-muted)",
-              cursor: loading ? "not-allowed" : "pointer",
-              transition: "border-color 150ms",
-            }}
-            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.borderColor = "var(--accent)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
           >
             Keep Booking
           </button>
           <button
+            className="btn btn-danger btn-block"
             onClick={onConfirm}
             disabled={loading}
-            style={{
-              flex: 1,
-              background: loading ? "var(--border)" : "rgba(232,68,90,0.15)",
-              border: `1px solid ${loading ? "var(--border)" : "rgba(232,68,90,0.4)"}`,
-              borderRadius: 7,
-              padding: "9px 0",
-              fontSize: 13,
-              fontWeight: 600,
-              color: loading ? "var(--text-muted)" : "var(--danger)",
-              cursor: loading ? "not-allowed" : "pointer",
-              transition: "opacity 150ms",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 5,
-            }}
-            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.opacity = "0.82"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
           >
-            {loading && (
-              <span
-                style={{
-                  width: 13,
-                  height: 13,
-                  border: "2px solid rgba(232,68,90,0.3)",
-                  borderTopColor: "var(--danger)",
-                  borderRadius: "50%",
-                  display: "inline-block",
-                  animation: "spin 0.7s linear infinite",
-                }}
-              />
-            )}
+            {loading && <span className="spinner" />}
             {loading ? "Cancelling..." : "Yes, Cancel"}
           </button>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -386,38 +234,12 @@ function CancelDialog({ booking, onConfirm, onClose, loading }) {
 function Tab({ label, count, active, onClick }) {
   return (
     <button
+      className={`tab-btn ${active ? "active" : ""}`}
       onClick={onClick}
-      style={{
-        background: "none",
-        border: "none",
-        borderBottom: `2px solid ${active ? "var(--accent)" : "transparent"}`,
-        padding: "8px 3px",
-        fontSize: 13,
-        fontWeight: active ? 600 : 400,
-        color: active ? "var(--text-primary)" : "var(--text-muted)",
-        cursor: "pointer",
-        transition: "color 150ms, border-color 150ms",
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        flexShrink: 0,
-      }}
-      onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--text-primary)"; }}
-      onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "var(--text-muted)"; }}
     >
       {label}
       {count > 0 && (
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            background: active ? "var(--accent)" : "var(--border)",
-            color: active ? "#000" : "var(--text-muted)",
-            borderRadius: 99,
-            padding: "1px 5px",
-            transition: "background 150ms, color 150ms",
-          }}
-        >
+        <span className="tab-count">
           {count}
         </span>
       )}
@@ -486,56 +308,26 @@ export default function MyBookings() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5" style={{ maxWidth: 720, margin: "0 auto", padding: "20px 24px" }}>
+    <div className="bookings-page">
 
       {/* Page header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="bookings-header">
         <div>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 20,
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              letterSpacing: "-0.4px",
-            }}
-          >
-            My Bookings
-          </h1>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-            Manage your room reservations
-          </p>
+          <h1>My Bookings</h1>
+          <p>Manage your room reservations</p>
         </div>
-        <Link
-          to="/"
-          style={{
-            background: "var(--accent)",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: 12,
-            padding: "8px 16px",
-            borderRadius: 7,
-            textDecoration: "none",
-            transition: "opacity 150ms",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.88"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
-        >
+        <Link to="/" className="btn btn-primary">
           + New Booking
         </Link>
       </div>
 
       {/* Cancel error banner */}
       {cancelError && (
-        <div
-          className="rounded-lg flex items-center justify-between gap-3"
-          style={{ background: "rgba(232,68,90,0.08)", border: "1px solid rgba(232,68,90,0.25)", padding: "10px 14px" }}
-        >
-          <p style={{ fontSize: 12, color: "var(--danger)" }}>{cancelError}</p>
+        <div className="alert-danger">
+          <p>{cancelError}</p>
           <button
+            className="booking-action-btn"
             onClick={() => setCancelError("")}
-            style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 13, flexShrink: 0 }}
           >
             ✕
           </button>
@@ -544,20 +336,11 @@ export default function MyBookings() {
 
       {/* Error state */}
       {error && (
-        <div className="flex flex-col items-center gap-3 py-10" style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 14, color: "var(--text-muted)" }}>{error}</p>
+        <div className="empty-state">
+          <p>{error}</p>
           <button
+            className="btn btn-primary"
             onClick={fetchBookings}
-            style={{
-              background: "var(--accent)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 7,
-              padding: "8px 20px",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
           >
             Retry
           </button>
@@ -567,17 +350,14 @@ export default function MyBookings() {
       {!error && (
         <>
           {/* Tabs */}
-          <div
-            className="flex gap-5"
-            style={{ borderBottom: "1px solid var(--border)", paddingBottom: 0 }}
-          >
+          <div className="tab-bar">
             <Tab label="Upcoming"  count={upcoming.length}  active={activeTab === "upcoming"}  onClick={() => setActiveTab("upcoming")}  />
             <Tab label="Past"      count={past.length}      active={activeTab === "past"}      onClick={() => setActiveTab("past")}      />
             <Tab label="Cancelled" count={cancelled.length} active={activeTab === "cancelled"} onClick={() => setActiveTab("cancelled")} />
           </div>
 
           {/* List */}
-          <div className="flex flex-col gap-2.5">
+          <div>
             {loading ? (
               <>
                 <CardSkeleton />

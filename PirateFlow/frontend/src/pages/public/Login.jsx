@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 
 function Spinner() {
   return (
-    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+    <span className="login-spinner" />
   );
 }
 
@@ -72,27 +72,20 @@ export default function Login() {
   const idDisabled = loading || studentId.length < 7;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-cream">
-      <div className="w-full max-w-[420px]">
-        {/* Card */}
-        <div className="bg-card rounded-2xl p-8 flex flex-col gap-5 border border-border shadow-lg animate-[fadeUp_.35s_ease_both]">
-          {/* Branding */}
-          <div className="flex flex-col items-center gap-2 text-center mb-1">
-            <img
-              src="/PirateFlow.png"
-              alt="PirateFlow"
-              className="w-14 h-14 object-contain"
-            />
-            <h1 className="font-display text-2xl font-bold text-shu-blue tracking-tight">
+    <div className="login-page">
+        <div className="login-card">
+          <div className="login-branding">
+            <img src="/PirateFlow.png" alt="PirateFlow" />
+            <h1>
               PirateFlow
             </h1>
-            <p className="text-[13px] text-muted">
+            <p>
               Seton Hall University &middot; Campus Space Booking
             </p>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-border">
+          <div className="login-tabs">
             {[
               { key: "id", label: "Student ID" },
               { key: "piratenet", label: "PirateNet Login" },
@@ -100,14 +93,7 @@ export default function Login() {
               <button
                 key={key}
                 onClick={() => { setTab(key); setError(""); }}
-                className={`
-                  flex-1 py-2.5 text-[13px] font-semibold cursor-pointer
-                  bg-transparent border-none border-b-2 transition-all duration-200 font-body
-                  ${tab === key
-                    ? "border-b-shu-blue text-shu-blue"
-                    : "border-b-transparent text-muted hover:text-navy"
-                  }
-                `}
+                className={`login-tab ${tab === key ? "active" : ""}`}
               >
                 {label}
               </button>
@@ -116,9 +102,9 @@ export default function Login() {
 
           {/* Student ID Tab */}
           {tab === "id" && (
-            <form onSubmit={handleIdLookup} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="student-id" className="text-[13px] font-medium text-navy">
+            <form onSubmit={handleIdLookup} className="login-form">
+              <div className="login-field">
+                <label htmlFor="student-id" className="login-label">
                   SHU ID Number
                 </label>
                 <input
@@ -131,15 +117,15 @@ export default function Login() {
                   onChange={(e) => setStudentId(e.target.value.replace(/\D/g, "").slice(0, 7))}
                   placeholder="e.g. 9012345"
                   maxLength={7}
-                  className="bg-cream border border-border rounded-xl px-4 py-3 text-sm text-navy outline-none w-full font-body transition-colors duration-200 focus:border-shu-blue placeholder:text-muted/50"
+                  className="login-input"
                 />
-                <p className="text-[11px] text-muted">
+                <p className="login-hint">
                   Enter your 7-digit student ID from your SHU card
                 </p>
               </div>
 
               {error && (
-                <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-xl px-4 py-2.5">
+                <p role="alert" className="login-error">
                   {error}
                 </p>
               )}
@@ -147,15 +133,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={idDisabled}
-                className={`
-                  w-full py-3 rounded-xl text-sm font-semibold
-                  flex items-center justify-center gap-2
-                  transition-all duration-200 border-none cursor-pointer font-body
-                  ${idDisabled
-                    ? "bg-border text-muted cursor-not-allowed"
-                    : "bg-shu-blue text-white hover:bg-shu-blue-lt shadow-sm hover:shadow-md"
-                  }
-                `}
+                className="login-submit"
               >
                 {loading && <Spinner />}
                 {loading ? "Looking up..." : "Continue"}
@@ -165,9 +143,9 @@ export default function Login() {
 
           {/* PirateNet Tab */}
           {tab === "piratenet" && (
-            <form onSubmit={handlePirateNet} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-[13px] font-medium text-navy">
+            <form onSubmit={handlePirateNet} className="login-form">
+              <div className="login-field">
+                <label htmlFor="email" className="login-label">
                   Email
                 </label>
                 <input
@@ -178,15 +156,15 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@shu.edu"
-                  className="bg-cream border border-border rounded-xl px-4 py-3 text-sm text-navy outline-none w-full font-body transition-colors duration-200 focus:border-shu-blue placeholder:text-muted/50"
+                  className="login-input"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="text-[13px] font-medium text-navy">
+              <div className="login-field">
+                <label htmlFor="password" className="login-label">
                   Password
                 </label>
-                <div className="relative">
+                <div className="login-password-wrap">
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -195,13 +173,14 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="bg-cream border border-border rounded-xl px-4 py-3 pr-16 text-sm text-navy outline-none w-full font-body transition-colors duration-200 focus:border-shu-blue placeholder:text-muted/50"
+                    className="login-input"
+                    style={{ paddingRight: 64 }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     tabIndex={-1}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[12px] text-muted hover:text-navy font-body font-medium px-1 py-0.5"
+                    className="login-password-toggle"
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
@@ -209,7 +188,7 @@ export default function Login() {
               </div>
 
               {error && (
-                <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-xl px-4 py-2.5">
+                <p role="alert" className="login-error">
                   {error}
                 </p>
               )}
@@ -217,15 +196,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`
-                  w-full py-3 rounded-xl text-sm font-semibold
-                  flex items-center justify-center gap-2
-                  transition-all duration-200 border-none cursor-pointer font-body
-                  ${loading
-                    ? "bg-border text-muted cursor-not-allowed"
-                    : "bg-shu-blue text-white hover:bg-shu-blue-lt shadow-sm hover:shadow-md"
-                  }
-                `}
+                className="login-submit"
               >
                 {loading && <Spinner />}
                 {loading ? "Signing in..." : "Sign In"}
@@ -234,11 +205,11 @@ export default function Login() {
           )}
 
           {/* Demo credentials */}
-          <div className="bg-cream border border-border rounded-xl p-4">
-            <p className="text-[10px] text-muted mb-2.5 font-bold uppercase tracking-widest">
+          <div className="login-demo">
+            <p className="login-demo-title">
               Demo Accounts
             </p>
-            <div className="flex flex-col gap-1.5">
+            <div className="login-demo-list">
               {tab === "id" ? (
                 [
                   { label: "Student", id: "9012345" },
@@ -249,10 +220,10 @@ export default function Login() {
                     key={id}
                     type="button"
                     onClick={() => setStudentId(id)}
-                    className="flex items-center gap-3 bg-transparent border-none cursor-pointer text-left py-1.5 px-2 rounded-lg hover:bg-white transition-colors font-body text-[13px] text-muted group"
+                    className="login-demo-btn"
                   >
-                    <span className="text-shu-blue font-semibold min-w-[52px]">{label}</span>
-                    <span className="group-hover:text-navy transition-colors">{id}</span>
+                    <span className="login-demo-label">{label}</span>
+                    <span>{id}</span>
                   </button>
                 ))
               ) : (
@@ -265,10 +236,10 @@ export default function Login() {
                     key={e}
                     type="button"
                     onClick={() => { setEmail(e); setPassword("openshu2026"); }}
-                    className="flex items-center gap-3 bg-transparent border-none cursor-pointer text-left py-1.5 px-2 rounded-lg hover:bg-white transition-colors font-body text-[13px] text-muted group"
+                    className="login-demo-btn"
                   >
-                    <span className="text-shu-blue font-semibold min-w-[52px]">{label}</span>
-                    <span className="group-hover:text-navy transition-colors">{e} &middot; openshu2026</span>
+                    <span className="login-demo-label">{label}</span>
+                    <span>{e} &middot; openshu2026</span>
                   </button>
                 ))
               )}
@@ -278,12 +249,11 @@ export default function Login() {
           {/* Back link */}
           <button
             onClick={() => navigate("/")}
-            className="bg-transparent border-none cursor-pointer text-muted text-[13px] font-body hover:text-navy transition-colors py-1"
+            className="login-back"
           >
             &larr; Back to campus
           </button>
         </div>
-      </div>
     </div>
   );
 }

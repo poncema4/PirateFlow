@@ -26,50 +26,46 @@ export default function AnomalyCard({ anomaly, onDismiss, isNew = false }) {
 
   return (
     <div
-      className="rounded-xl p-4 transition-all duration-500"
+      className="anomaly-card"
       style={{
-        background: "var(--bg-card)",
-        border: `1px solid ${sev.color}44`,
-        borderLeft: `4px solid ${sev.color}`,
+        borderColor: `${sev.color}44`,
+        borderLeftColor: sev.color,
         animation: isNew ? "slideIn 0.4s ease-out" : "none",
       }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 flex-1">
-          <span style={{ fontSize: 18, color: sev.color, marginTop: 1 }}>{sev.icon}</span>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
+      <div className="anomaly-card-body">
+        <div className="anomaly-card-content">
+          <span className="anomaly-card-icon" style={{ color: sev.color }}>{sev.icon}</span>
+          <div className="anomaly-card-detail">
+            <div className="anomaly-card-meta">
               <span
-                className="text-xs px-2 py-0.5 rounded-full font-bold"
+                className="pill"
                 style={{ background: `${sev.color}22`, color: sev.color }}
               >
                 {sev.label}
               </span>
-              <span
-                className="text-xs px-2 py-0.5 rounded-full"
-                style={{ background: "var(--border)", color: "var(--text-muted)" }}
-              >
+              <span className="pill pill--outline">
                 {typeLabels[anomaly.type] || anomaly.type || "Anomaly"}
               </span>
               {(anomaly.room_name || anomaly.building_name) && (
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                <span className="anomaly-card-location">
                   {anomaly.room_name}{anomaly.room_name && anomaly.building_name ? " \u00B7 " : ""}{anomaly.building_name}
                 </span>
               )}
             </div>
 
-            <p style={{ fontSize: 13, color: "var(--text-primary)", marginBottom: 4, lineHeight: 1.5 }}>
+            <p className="anomaly-card-desc">
               {anomaly.description}
             </p>
 
             {anomaly.recommended_action && (
-              <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                <span style={{ color: "var(--accent)", fontWeight: 600 }}>&rarr; </span>
+              <p className="anomaly-card-action">
+                <span>&rarr; </span>
                 {anomaly.recommended_action}
               </p>
             )}
 
-            <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6 }}>
+            <p className="anomaly-card-time">
               Detected {timeAgo(anomaly.detected_at || anomaly.created_at || new Date().toISOString())}
             </p>
           </div>
@@ -78,23 +74,7 @@ export default function AnomalyCard({ anomaly, onDismiss, isNew = false }) {
         {onDismiss && (
           <button
             onClick={() => onDismiss(anomaly.id)}
-            className="text-sm px-2.5 py-1 rounded-lg transition-all"
-            style={{
-              background: "transparent",
-              border: "1px solid var(--border)",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              flexShrink: 0,
-              fontSize: 12,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = "var(--danger)";
-              e.currentTarget.style.color = "var(--danger)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.color = "var(--text-muted)";
-            }}
+            className="anomaly-dismiss-btn"
           >
             Dismiss
           </button>

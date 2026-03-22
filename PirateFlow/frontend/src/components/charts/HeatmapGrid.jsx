@@ -6,8 +6,8 @@ function HeatmapCell({ value }) {
   const bg = `rgba(0, 75, 141, ${0.08 + opacity * 0.92})`;
   return (
     <div
-      className="rounded flex items-center justify-center cursor-pointer transition-all"
-      style={{ background: bg, color: value > 55 ? "#fff" : "var(--text-muted)", fontSize: 9, height: 26 }}
+      className="heatmap-cell"
+      style={{ background: bg, color: value > 55 ? "#fff" : undefined }}
       title={`${value}% utilization`}
     >
       {value}%
@@ -24,27 +24,27 @@ export default function HeatmapGrid({ data = [] }) {
   );
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <div className="grid mb-1" style={{ gridTemplateColumns: `50px repeat(12, 1fr)`, gap: 2, minWidth: 560 }}>
+    <div className="heatmap-wrap">
+      <div className="heatmap-row heatmap-row--header" style={{ gridTemplateColumns: `50px repeat(12, 1fr)` }}>
         <div />
         {hours.map((h) => (
-          <div key={h} style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center" }}>{h}</div>
+          <div key={h} className="heatmap-hour-label">{h}</div>
         ))}
       </div>
 
       {days.map((day, di) => (
-        <div key={day} className="grid mb-1" style={{ gridTemplateColumns: `50px repeat(12, 1fr)`, gap: 2, minWidth: 560 }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center" }}>{day}</div>
+        <div key={day} className="heatmap-row" style={{ gridTemplateColumns: `50px repeat(12, 1fr)` }}>
+          <div className="heatmap-day-label">{day}</div>
           {heatmap[di].map((val, hi) => (
             <HeatmapCell key={hi} value={val} />
           ))}
         </div>
       ))}
 
-      <div className="flex items-center gap-2 mt-3">
-        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Low</span>
-        <div style={{ height: 6, flex: 1, borderRadius: 3, background: "linear-gradient(90deg, rgba(0,75,141,0.08), rgba(0,75,141,1))" }} />
-        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>High</span>
+      <div className="heatmap-legend">
+        <span className="heatmap-legend-label">Low</span>
+        <div className="heatmap-legend-bar" />
+        <span className="heatmap-legend-label">High</span>
       </div>
     </div>
   );

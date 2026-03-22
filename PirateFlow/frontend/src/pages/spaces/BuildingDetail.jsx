@@ -10,34 +10,25 @@ const ROOM_TYPE_OPTIONS = Object.entries(ROOM_TYPE_LABELS).map(([value, label]) 
 function RoomCard({ room, isSelected, onClick }) {
   const status = STATUS_INFO[room.status] ?? STATUS_INFO.closed;
   return (
-    <div onClick={onClick} className="rounded-xl p-3 cursor-pointer flex flex-col gap-2"
-      style={{
-        background: isSelected ? "var(--bg-primary)" : "var(--bg-card)",
-        border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-        transition: "border-color 150ms, transform 150ms, box-shadow 150ms",
-        boxShadow: isSelected ? "0 0 12px rgba(0,75,141,0.1)" : "none",
-      }}
-      onMouseEnter={(e) => { if (!isSelected) { e.currentTarget.style.borderColor = "rgba(0,75,141,0.3)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
-      onMouseLeave={(e) => { if (!isSelected) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "translateY(0)"; } }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <h4 style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.3 }}>{room.name}</h4>
-        <span className="flex items-center gap-1 flex-shrink-0" style={{ fontSize: 10, color: status.color }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: status.color, display: "inline-block", flexShrink: 0 }} />
+    <div onClick={onClick} className={`floor-room-card${isSelected ? " selected" : ""}`}>
+      <div className="floor-room-top">
+        <h4 className="floor-room-name">{room.name}</h4>
+        <span className="floor-room-status" style={{ color: status.color }}>
+          <span className="floor-room-status-dot" style={{ background: status.color }} />
           {status.label}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--border)", color: "var(--text-muted)", fontSize: 11 }}>{ROOM_TYPE_LABELS[room.room_type] || room.room_type}</span>
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>&#x25EB; {room.capacity}</span>
-        {room.hourly_rate && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>${room.hourly_rate}/hr</span>}
+      <div className="floor-room-info">
+        <span className="floor-room-tag">{ROOM_TYPE_LABELS[room.room_type] || room.room_type}</span>
+        <span className="floor-room-tag">&#x25EB; {room.capacity}</span>
+        {room.hourly_rate && <span className="floor-room-tag">${room.hourly_rate}/hr</span>}
       </div>
       {room.equipment?.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="floor-room-equip">
           {room.equipment.slice(0, 3).map((eq) => (
-            <span key={eq} style={{ fontSize: 10, padding: "1px 6px", background: "var(--bg-primary)", borderRadius: 4, color: "var(--text-muted)" }}>{EQUIPMENT_ICONS[eq] || "\u00b7"} {eq.replace(/_/g, " ")}</span>
+            <span key={eq} className="floor-room-equip-tag">{EQUIPMENT_ICONS[eq] || "\u00b7"} {eq.replace(/_/g, " ")}</span>
           ))}
-          {room.equipment.length > 3 && <span style={{ fontSize: 10, color: "var(--text-muted)", padding: "1px 4px" }}>+{room.equipment.length - 3}</span>}
+          {room.equipment.length > 3 && <span className="floor-room-equip-tag">+{room.equipment.length - 3}</span>}
         </div>
       )}
     </div>
@@ -48,33 +39,27 @@ function FloorSection({ floorName, rooms, expandedRoomId, onRoomClick, onClosePa
   const [open, setOpen] = useState(defaultOpen);
   const availableCount = rooms.filter((r) => r.status === "available").length;
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between px-4 py-2.5"
-        style={{ background: "var(--bg-card)", border: "none", cursor: "pointer", textAlign: "left", transition: "background 150ms" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-primary)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-card)"; }}
-      >
-        <div className="flex items-center gap-2">
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{floorName}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--border)", color: "var(--text-muted)", fontSize: 11 }}>{rooms.length} room{rooms.length !== 1 ? "s" : ""}</span>
+    <div className="floor-section">
+      <button onClick={() => setOpen((v) => !v)} className="floor-section-header">
+        <div className="floor-name">
+          <span>{floorName}</span>
+          <span className="badge-muted">{rooms.length} room{rooms.length !== 1 ? "s" : ""}</span>
           {availableCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(0,75,141,0.1)", color: "var(--success)", border: "1px solid rgba(0,75,141,0.2)", fontSize: 11 }}>{availableCount} available</span>
+            <span className="floor-badges">{availableCount} available</span>
           )}
         </div>
-        <span style={{ color: "var(--text-muted)", fontSize: 11, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms" }}>\u25BE</span>
+        <span className={`floor-chevron${open ? " open" : ""}`}>{"\u25BE"}</span>
       </button>
       {open && (
-        <div className="grid gap-2 p-3" style={{ background: "var(--bg-primary)", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
+        <div className="floor-room-grid">
           {rooms.length === 0 ? (
-            <p style={{ fontSize: 12, color: "var(--text-muted)", padding: "6px 0", gridColumn: "1 / -1" }}>No rooms match the current filters.</p>
+            <p className="empty-state" style={{ gridColumn: "1 / -1" }}>No rooms match the current filters.</p>
           ) : (
             rooms.map((room) => (
               <React.Fragment key={room.id}>
                 <RoomCard room={room} isSelected={expandedRoomId === room.id} onClick={() => onRoomClick(room.id)} />
                 {expandedRoomId === room.id && (
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <RoomExpandedPanel roomId={room.id} onClose={onClosePanel} onBook={onBook} />
-                  </div>
+                  <RoomExpandedPanel roomId={room.id} onClose={onClosePanel} onBook={onBook} />
                 )}
               </React.Fragment>
             ))
@@ -85,8 +70,8 @@ function FloorSection({ floorName, rooms, expandedRoomId, onRoomClick, onClosePa
   );
 }
 
-function Skeleton({ height, className = "" }) {
-  return <div className={`rounded-xl animate-pulse ${className}`} style={{ height, background: "var(--bg-card)", border: "1px solid var(--border)" }} />;
+function Skeleton({ height }) {
+  return <div className="skeleton" style={{ height }} />;
 }
 
 export default function BuildingDetail() {
@@ -177,8 +162,8 @@ export default function BuildingDetail() {
 
   if (loading) {
     return (
-      <div className="p-4 flex flex-col gap-4" style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <Skeleton height={18} className="w-32" />
+      <div className="building-detail">
+        <Skeleton height={18} />
         <Skeleton height={72} />
         <Skeleton height={40} />
         <Skeleton height={180} />
@@ -188,145 +173,109 @@ export default function BuildingDetail() {
 
   if (error) {
     return (
-      <div className="p-4 flex flex-col gap-3 items-center" style={{ maxWidth: 1000, margin: "0 auto", paddingTop: 64 }}>
-        <p style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 600 }}>{error}</p>
-        <div className="flex gap-2">
-          <button onClick={fetchData} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "7px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Retry</button>
-          <button onClick={() => navigate("/")} style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 18px", fontSize: 12, cursor: "pointer" }}>Back</button>
+      <div className="building-detail empty-state">
+        <h3>{error}</h3>
+        <div className="filter-bar">
+          <button onClick={fetchData} className="btn btn-primary">Retry</button>
+          <button onClick={() => navigate("/")} className="btn btn-secondary">Back</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 flex flex-col gap-4" style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <div className="building-detail">
       <nav>
-        <Link to="/" style={{ fontSize: 12, color: "var(--text-muted)", textDecoration: "none", transition: "color 150ms" }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}>
-          \u2190 Campus Buildings
+        <Link to="/" className="breadcrumb">
+          {"\u2190"} Campus Buildings
         </Link>
       </nav>
 
       {building && (
-        <div className="rounded-xl p-4 flex items-start justify-between gap-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <div className="flex flex-col gap-0.5">
-            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
+        <div className="building-detail-header">
+          <div>
+            <h1 className="building-detail-name">
               {building.name}
             </h1>
-            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {building.address} \u00b7 {building.total_floors} floor{building.total_floors !== 1 ? "s" : ""}
+            <p className="building-detail-meta">
+              {building.address} {"\u00b7"} {building.total_floors} floor{building.total_floors !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="flex gap-5 flex-shrink-0">
-            <div className="text-right">
-              <p style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-display)", lineHeight: 1 }}>{building.room_count}</p>
-              <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>rooms</p>
+          <div className="building-stats">
+            <div className="building-stat">
+              <p className="building-stat-value">{building.room_count}</p>
+              <p className="building-stat-label">rooms</p>
             </div>
-            <div className="text-right">
-              <p style={{
-                fontSize: 20, fontWeight: 700, fontFamily: "var(--font-display)", lineHeight: 1,
+            <div className="building-stat">
+              <p className="building-stat-value" style={{
                 color: building.current_occupancy_pct > 0.7 ? "var(--danger)" : building.current_occupancy_pct > 0.4 ? "var(--warning)" : "var(--success)",
               }}>
                 {Math.round(building.current_occupancy_pct * 100)}%
               </p>
-              <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>occupied</p>
+              <p className="building-stat-label">occupied</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setShowFilters((v) => !v)}
-            style={{
-              background: activeFilterCount > 0 ? "var(--accent-muted)" : "var(--bg-card)",
-              color: activeFilterCount > 0 ? "var(--accent)" : "var(--text-muted)",
-              border: `1px solid ${activeFilterCount > 0 ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
-              borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 150ms",
-            }}>
-            Filters
-            {activeFilterCount > 0 && (
-              <span style={{ background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 15, height: 15, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
+      <div className="filter-bar">
+        <button onClick={() => setShowFilters((v) => !v)} className={`filter-btn${activeFilterCount > 0 ? " active" : ""}`}>
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="filter-count">{activeFilterCount}</span>
+          )}
+        </button>
 
-          <button onClick={() => setAvailableOnly((v) => !v)}
-            style={{
-              background: availableOnly ? "rgba(0,75,141,0.1)" : "var(--bg-card)",
-              color: availableOnly ? "var(--success)" : "var(--text-muted)",
-              border: `1px solid ${availableOnly ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
-              borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "all 150ms",
-            }}>
-            Available now
-          </button>
+        <button onClick={() => setAvailableOnly((v) => !v)} className={`filter-btn${availableOnly ? " active" : ""}`}>
+          Available now
+        </button>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Sort:</span>
-            {[{ value: "name", label: "Name" }, { value: "capacity", label: "Capacity" }, { value: "availability", label: "Availability" }].map((opt) => (
-              <button key={opt.value} onClick={() => setSortBy(opt.value)}
-                style={{
-                  background: sortBy === opt.value ? "var(--accent-muted)" : "transparent",
-                  color: sortBy === opt.value ? "var(--accent)" : "var(--text-muted)",
-                  border: `1px solid ${sortBy === opt.value ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
-                  borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", transition: "all 150ms",
-                }}>
-                {opt.label}
+        <div className="sort-btns">
+          <span className="sort-label">Sort:</span>
+          {[{ value: "name", label: "Name" }, { value: "capacity", label: "Capacity" }, { value: "availability", label: "Availability" }].map((opt) => (
+            <button key={opt.value} onClick={() => setSortBy(opt.value)} className={`sort-btn${sortBy === opt.value ? " active" : ""}`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="filter-panel">
+          <div className="filter-section-label">Room Type</div>
+          <div className="filter-pills">
+            {ROOM_TYPE_OPTIONS.map(({ value, label }) => (
+              <button key={value} onClick={() => toggleType(value)} className={`filter-pill${selectedTypes.includes(value) ? " active" : ""}`}>
+                {label}
               </button>
             ))}
           </div>
-        </div>
-
-        {showFilters && (
-          <div className="rounded-xl p-3 flex flex-col gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <div className="flex flex-col gap-1.5">
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Room Type</p>
-              <div className="flex flex-wrap gap-1.5">
-                {ROOM_TYPE_OPTIONS.map(({ value, label }) => (
-                  <button key={value} onClick={() => toggleType(value)}
-                    style={{
-                      background: selectedTypes.includes(value) ? "var(--accent-muted)" : "var(--bg-primary)",
-                      color: selectedTypes.includes(value) ? "var(--accent)" : "var(--text-muted)",
-                      border: `1px solid ${selectedTypes.includes(value) ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
-                      borderRadius: 20, padding: "3px 10px", fontSize: 11, cursor: "pointer", transition: "all 150ms",
-                    }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Min Capacity</p>
-              <input type="number" min="1" max="500" value={minCapacity} onChange={(e) => setMinCapacity(e.target.value)} placeholder="Any"
-                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", fontSize: 12, color: "var(--text-primary)", outline: "none", width: 72 }} />
-              {activeFilterCount > 0 && (
-                <button onClick={() => { setSelectedTypes([]); setMinCapacity(""); setAvailableOnly(false); }}
-                  style={{ fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer" }}>
-                  Clear all
-                </button>
-              )}
-            </div>
+          <div className="filter-section-label">Min Capacity</div>
+          <div className="filter-pills">
+            <input type="number" min="1" max="500" value={minCapacity} onChange={(e) => setMinCapacity(e.target.value)} placeholder="Any" className="room-panel-date-input" />
+            {activeFilterCount > 0 && (
+              <button onClick={() => { setSelectedTypes([]); setMinCapacity(""); setAvailableOnly(false); }} className="btn btn-secondary">
+                Clear all
+              </button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+      <p className="building-detail-meta">
         {visibleRooms.length} room{visibleRooms.length !== 1 ? "s" : ""}{activeFilterCount > 0 ? " matching filters" : " total"}
       </p>
 
-      <div className="flex flex-col gap-2">
+      <div>
         {floorNames.length === 0 && allRooms.length === 0 ? (
-          <div className="rounded-xl p-8 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>No rooms listed</p>
-            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Check back later or browse another building.</p>
+          <div className="empty-state">
+            <h3>No rooms listed</h3>
+            <p>Check back later or browse another building.</p>
           </div>
         ) : floorNames.length === 0 && allRooms.length > 0 ? (
-          <div className="rounded-xl p-6 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10 }}>No rooms match the current filters.</p>
-            <button onClick={() => { setSelectedTypes([]); setMinCapacity(""); setAvailableOnly(false); }}
-              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+          <div className="empty-state">
+            <p>No rooms match the current filters.</p>
+            <button onClick={() => { setSelectedTypes([]); setMinCapacity(""); setAvailableOnly(false); }} className="btn btn-primary">
               Clear filters
             </button>
           </div>

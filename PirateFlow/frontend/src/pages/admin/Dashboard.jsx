@@ -99,55 +99,17 @@ export default function Dashboard() {
   })();
 
   return (
-    <div className="p-8 flex flex-col gap-7" style={{ minHeight: "100vh" }}>
+    <div className="dashboard">
       {/* Welcome Banner */}
-      <div
-        className="rounded-2xl p-7 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #001a3a 0%, #002d62 40%, #004B8D 100%)",
-          boxShadow: "0 8px 32px rgba(0,30,80,.2)",
-        }}
-      >
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <h1 style={{
-            fontSize: 26,
-            fontWeight: 800,
-            fontFamily: "var(--font-display)",
-            color: "#ffffff",
-            letterSpacing: "-0.02em",
-            marginBottom: 6,
-          }}>
-            {greeting}, {user?.name?.split(" ")[0] || "Admin"}
-          </h1>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,.6)", maxWidth: 480, lineHeight: 1.6 }}>
-            Here's an overview of your campus spaces. Monitor building occupancy, track bookings, and stay on top of alerts.
-          </p>
-        </div>
-        {/* Decorative circles */}
-        <div style={{
-          position: "absolute", top: -40, right: -20, width: 200, height: 200,
-          borderRadius: "50%", background: "rgba(255,255,255,.04)",
-        }} />
-        <div style={{
-          position: "absolute", bottom: -60, right: 80, width: 160, height: 160,
-          borderRadius: "50%", background: "rgba(255,255,255,.03)",
-        }} />
-        <div style={{
-          position: "absolute", top: 20, right: 160, width: 80, height: 80,
-          borderRadius: "50%", background: "rgba(255,255,255,.02)",
-        }} />
+      <div className="welcome-banner">
+        <h1>{greeting}, {user?.name?.split(" ")[0] || "Admin"}</h1>
+        <p>
+          Here's an overview of your campus spaces. Monitor building occupancy, track bookings, and stay on top of alerts.
+        </p>
       </div>
 
       {error && (
-        <div
-          className="rounded-xl px-5 py-4 flex items-center gap-3"
-          style={{
-            background: "rgba(192,57,43,.06)",
-            border: "1px solid rgba(192,57,43,.15)",
-            color: "var(--danger)",
-            fontSize: 13.5,
-          }}
-        >
+        <div className="error-banner">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <line x1="15" y1="9" x2="9" y2="15"/>
@@ -158,7 +120,7 @@ export default function Dashboard() {
       )}
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="stats-grid">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)
         ) : (
@@ -172,19 +134,11 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+      <div className="content-grid">
         {/* Building Grid */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center gap-2.5 mb-5">
-            <div
-              className="rounded-lg flex items-center justify-center"
-              style={{
-                width: 32,
-                height: 32,
-                background: "rgba(0,75,141,.08)",
-                color: "#004B8D",
-              }}
-            >
+        <div className="content-grid-main">
+          <div className="section-header">
+            <div className="section-icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="2" width="16" height="20" rx="2"/>
                 <path d="M9 22v-4h6v4"/>
@@ -194,50 +148,29 @@ export default function Dashboard() {
                 <line x1="16" y1="10" x2="16" y2="10.01"/>
               </svg>
             </div>
-            <p style={{
-              fontWeight: 700,
-              fontSize: 17,
-              color: "var(--text-primary)",
-              fontFamily: "var(--font-display)",
-            }}>
-              Building Status
-            </p>
+            <p className="section-title">Building Status</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="building-grid">
             {loading
               ? Array.from({ length: 6 }).map((_, i) => <BuildingCardSkeleton key={i} />)
               : buildings.map((b) => (
                   <BuildingCard key={b.id} building={b} onClick={() => navigate(`/buildings/${b.id}`)} />
                 ))}
             {!loading && buildings.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-16">
-                <div
-                  className="rounded-2xl flex items-center justify-center mb-4"
-                  style={{
-                    width: 64,
-                    height: 64,
-                    background: "rgba(0,75,141,.05)",
-                    color: "rgba(0,75,141,.2)",
-                  }}
-                >
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="4" y="2" width="16" height="20" rx="2"/>
-                    <path d="M9 22v-4h6v4"/>
-                  </svg>
-                </div>
-                <p style={{ color: "var(--text-muted)", fontSize: 14, fontWeight: 600 }}>
-                  No buildings found
-                </p>
-                <p style={{ color: "var(--text-muted)", fontSize: 12.5, opacity: .7, marginTop: 4 }}>
-                  Buildings will appear here once added
-                </p>
+              <div className="empty-state">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="2" width="16" height="20" rx="2"/>
+                  <path d="M9 22v-4h6v4"/>
+                </svg>
+                <h3>No buildings found</h3>
+                <p>Buildings will appear here once added</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Activity Feed */}
-        <div className="lg:col-span-1">
+        <div>
           <ActivityFeed items={activity} />
         </div>
       </div>

@@ -100,24 +100,9 @@ export default function Sidebar({ alertCount = 0 }) {
   };
 
   return (
-    <aside
-      className="flex flex-col h-screen sticky top-0 transition-all duration-300"
-      style={{
-        width: collapsed ? 72 : 240,
-        background: "linear-gradient(195deg, #001a3a 0%, #002d62 40%, #003d7a 100%)",
-        flexShrink: 0,
-        boxShadow: "4px 0 24px rgba(0,20,60,.15)",
-      }}
-    >
+    <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
       {/* Logo */}
-      <div
-        className="flex items-center gap-3 px-5"
-        style={{
-          borderBottom: "1px solid rgba(255,255,255,.08)",
-          height: 64,
-          flexShrink: 0,
-        }}
-      >
+      <div className="sidebar-logo">
         <img
           src="/PirateFlow.png"
           alt="PirateFlow"
@@ -129,15 +114,7 @@ export default function Sidebar({ alertCount = 0 }) {
           }}
         />
         {!collapsed && (
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 18,
-              color: "#ffffff",
-              letterSpacing: "-0.5px",
-              fontWeight: 700,
-            }}
-          >
+          <span className="sidebar-logo-text">
             PirateFlow
           </span>
         )}
@@ -145,63 +122,31 @@ export default function Sidebar({ alertCount = 0 }) {
 
       {/* Role badge */}
       {!collapsed && (
-        <div className="px-5 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,.06)" }}>
-          <span
-            className="text-xs px-3 py-1 rounded-full font-semibold inline-flex items-center gap-1.5"
-            style={{
-              background: isAdmin
-                ? "linear-gradient(135deg, rgba(255,255,255,.15), rgba(255,255,255,.05))"
-                : "rgba(255,255,255,.08)",
-              color: isAdmin ? "#7eb8ff" : "rgba(255,255,255,.5)",
-              border: `1px solid ${isAdmin ? "rgba(126,184,255,.2)" : "rgba(255,255,255,.08)"}`,
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            <span style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: isAdmin ? "#7eb8ff" : "rgba(255,255,255,.4)",
-            }} />
+        <div className="sidebar-role">
+          <span className={`sidebar-role-badge${!isAdmin ? " student" : ""}`}>
+            <span className="sidebar-role-dot" />
             {isAdmin ? "Admin" : "Student"}
           </span>
         </div>
       )}
 
       {/* Nav */}
-      <nav className="flex-1 py-4 flex flex-col gap-1 px-3 overflow-y-auto">
+      <nav className="sidebar-nav">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             end={item.path === "/"}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative group"
-            style={({ isActive }) => ({
-              background: isActive
-                ? "linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.06))"
-                : "transparent",
-              color: isActive ? "#ffffff" : "rgba(255,255,255,.55)",
-              fontWeight: isActive ? 600 : 400,
-              fontSize: 13.5,
-              textDecoration: "none",
-              borderLeft: isActive ? "3px solid #5ca8ff" : "3px solid transparent",
-              paddingLeft: isActive ? 12 : 12,
-            })}
+            className={({ isActive }) =>
+              `sidebar-nav-item${isActive ? " active" : ""}`
+            }
           >
-            <span style={{ minWidth: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="sidebar-nav-icon">
               <NavIcon name={item.icon} size={18} />
             </span>
             {!collapsed && <span>{item.label}</span>}
             {item.path === "/alerts" && alertCount > 0 && isAdmin && (
-              <span
-                className="ml-auto text-xs rounded-full px-2 py-0.5 font-bold"
-                style={{
-                  background: "linear-gradient(135deg, #e74c3c, #c0392b)",
-                  color: "#fff",
-                  fontSize: 10,
-                  minWidth: 20,
-                  textAlign: "center",
-                  boxShadow: "0 2px 8px rgba(231,76,60,.4)",
-                }}
-              >
+              <span className="sidebar-alert-badge">
                 {alertCount}
               </span>
             )}
@@ -210,34 +155,17 @@ export default function Sidebar({ alertCount = 0 }) {
       </nav>
 
       {/* User + controls */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,.08)", padding: 12 }}>
+      <div className="sidebar-footer">
         {!collapsed && (
-          <div
-            className="flex items-center gap-3 mb-3 px-2 py-2.5 rounded-xl"
-            style={{ background: "rgba(255,255,255,.06)" }}
-          >
-            <div
-              className="rounded-full flex items-center justify-center text-sm font-bold"
-              style={{
-                width: 34,
-                height: 34,
-                background: "linear-gradient(135deg, #5ca8ff, #004B8D)",
-                color: "#fff",
-                flexShrink: 0,
-                fontSize: 14,
-                boxShadow: "0 2px 8px rgba(92,168,255,.3)",
-              }}
-            >
+          <div className="sidebar-user">
+            <div className="sidebar-user-avatar">
               {user?.name?.[0] || "?"}
             </div>
-            <div className="flex-1 min-w-0">
-              <p style={{
-                fontSize: 13, fontWeight: 600, color: "#fff",
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="sidebar-user-name">
                 {user?.name || "Guest"}
               </p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,.45)" }}>
+              <p className="sidebar-user-role">
                 SHU {isAdmin ? "Staff" : "Student"}
               </p>
             </div>
@@ -246,25 +174,7 @@ export default function Sidebar({ alertCount = 0 }) {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl transition-all"
-          style={{
-            color: "rgba(255,255,255,.5)",
-            fontSize: 12,
-            background: "transparent",
-            border: "1px solid rgba(255,255,255,.08)",
-            cursor: "pointer",
-            fontFamily: "var(--font-body)",
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = "rgba(231,76,60,.15)";
-            e.currentTarget.style.borderColor = "rgba(231,76,60,.3)";
-            e.currentTarget.style.color = "#ff7b7b";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = "rgba(255,255,255,.08)";
-            e.currentTarget.style.color = "rgba(255,255,255,.5)";
-          }}
+          className="sidebar-btn"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -276,22 +186,12 @@ export default function Sidebar({ alertCount = 0 }) {
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center py-1.5 rounded-xl transition-colors mt-1.5"
-          style={{
-            color: "rgba(255,255,255,.35)",
-            fontSize: 11,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "var(--font-body)",
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,.6)"}
-          onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,.35)"}
+          className="sidebar-btn-collapse"
         >
           {collapsed ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
           ) : (
-            <span className="flex items-center gap-1.5">
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
               Collapse
             </span>

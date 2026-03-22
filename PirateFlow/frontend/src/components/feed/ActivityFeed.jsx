@@ -51,9 +51,7 @@ export default function ActivityFeed({ items = [] }) {
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
         </div>
-        <p className="activity-feed-title">
-          Live Activity
-        </p>
+        <p className="activity-feed-title">Live Activity</p>
       </div>
 
       <div className="activity-feed-list">
@@ -64,19 +62,14 @@ export default function ActivityFeed({ items = [] }) {
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
             </div>
-            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>No recent activity</p>
-            <p style={{ fontSize: 12, opacity: .7, textAlign: "center" }}>
-              Activity will appear here as events occur
-            </p>
+            <p className="activity-feed-empty-title">No recent activity</p>
+            <p className="activity-feed-empty-sub">Activity will appear here as events occur</p>
           </div>
         ) : (
           items.slice(0, 25).map((item) => {
             const config = typeConfig[item.type] || typeConfig.occupancy;
             return (
-              <div
-                key={item.id}
-                className="activity-feed-item"
-              >
+              <div key={item.id} className="activity-feed-item">
                 <div
                   className="activity-feed-item-icon"
                   style={{ background: config.bg, color: config.color }}
@@ -84,12 +77,8 @@ export default function ActivityFeed({ items = [] }) {
                   {config.icon}
                 </div>
                 <div className="activity-feed-item-content">
-                  <p className="activity-feed-item-msg">
-                    {item.message}
-                  </p>
-                  <p className="activity-feed-item-time">
-                    {timeAgo(item.timestamp)}
-                  </p>
+                  <p className="activity-feed-item-msg">{item.message}</p>
+                  <p className="activity-feed-item-time">{timeAgo(item.timestamp)}</p>
                 </div>
               </div>
             );

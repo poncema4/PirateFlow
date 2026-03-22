@@ -5,17 +5,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROOM_TYPE_LABELS, EQUIPMENT_LABELS } from "../../constants/rooms";
 import TopBar from "../../components/common/TopBar";
 
-const TYPE_COLORS = {
-  study_room:      { bg: "#eff6ff", tag: "rgba(37,99,235,.1)",  color: "#2563eb" },
-  computer_lab:    { bg: "#f0fdf4", tag: "rgba(22,163,74,.1)",  color: "#16a34a" },
-  lecture_hall:    { bg: "#fefce8", tag: "rgba(202,138,4,.1)",   color: "#ca8a04" },
-  science_lab:     { bg: "#ecfdf5", tag: "rgba(5,150,105,.1)",  color: "#059669" },
-  conference_room: { bg: "#fef2f2", tag: "rgba(220,38,38,.1)",  color: "#dc2626" },
-  classroom:       { bg: "#eff6ff", tag: "rgba(37,99,235,.1)",  color: "#2563eb" },
-  event_space:     { bg: "#fefce8", tag: "rgba(202,138,4,.1)",  color: "#ca8a04" },
-  multipurpose:    { bg: "#f0fdf4", tag: "rgba(22,163,74,.1)",  color: "#16a34a" },
-};
-
 /* ─── Search Icon SVG ────────────────────────────────────────────────── */
 function SearchIcon() {
   return (
@@ -28,35 +17,22 @@ function SearchIcon() {
 
 /* ─── Room Card ──────────────────────────────────────────────────────── */
 function RoomCard({ room, onClick, onBook }) {
-  const tc = TYPE_COLORS[room.room_type] || TYPE_COLORS.classroom;
   const available = room.status === "available";
   const bookable = room.is_bookable && room.status !== "maintenance" && room.status !== "closed";
 
   return (
     <div
       onClick={() => onClick(room)}
-      className={`room-card ${!bookable ? "disabled" : ""}`}
+      className={`room-card${!bookable ? " disabled" : ""}`}
     >
       {/* Type header */}
-      <div
-        className="room-card-type"
-        style={{ background: tc.bg }}
-      >
-        <span
-          className="room-card-type-badge"
-          style={{ background: tc.tag, color: tc.color }}
-        >
+      <div className="room-card-type">
+        <span className="room-card-type-badge">
           {ROOM_TYPE_LABELS[room.room_type] || room.room_type}
         </span>
         <span
           title={available ? "Available now" : "Unavailable"}
-          className="room-card-status-dot"
-          style={{
-            background: available ? "var(--success)" : "var(--danger)",
-            boxShadow: available
-              ? "0 0 0 3px rgba(58,138,82,.18)"
-              : "0 0 0 3px rgba(176,48,48,.18)",
-          }}
+          className={`room-card-status-dot${available ? " available" : " unavailable"}`}
         />
       </div>
 
@@ -80,15 +56,12 @@ function RoomCard({ room, onClick, onBook }) {
         {room.equipment?.length > 0 && (
           <div className="room-card-equipment">
             {room.equipment.slice(0, 4).map(eq => (
-              <span
-                key={eq}
-                className="room-card-equip-tag"
-              >
+              <span key={eq} className="room-card-equip-tag">
                 {EQUIPMENT_LABELS[eq] || eq.replace(/_/g, " ")}
               </span>
             ))}
             {room.equipment.length > 4 && (
-              <span className="room-card-equip-tag" style={{ background: 'transparent', padding: '0 4px' }}>
+              <span className="room-card-equip-tag">
                 +{room.equipment.length - 4} more
               </span>
             )}
@@ -102,8 +75,8 @@ function RoomCard({ room, onClick, onBook }) {
           <>
             <span className="room-card-avail">
               {available
-                ? <><span className="room-card-avail-dot" style={{ background: 'var(--success)' }} />Available now</>
-                : <><span className="room-card-avail-dot" style={{ background: 'var(--warning)' }} />In use</>
+                ? <><span className="room-card-avail-dot available" />Available now</>
+                : <><span className="room-card-avail-dot in-use" />In use</>
               }
             </span>
             <button
@@ -114,7 +87,7 @@ function RoomCard({ room, onClick, onBook }) {
             </button>
           </>
         ) : (
-          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 500 }}>
+          <span className="room-card-unavailable-label">
             {room.status === "maintenance" ? "Under maintenance" : "Unavailable"}
           </span>
         )}
@@ -172,7 +145,7 @@ export default function Landing() {
   const availableCount = rooms.filter(r => r.status === "available").length;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+    <div className="landing-page">
       <TopBar />
 
       {/* Hero Section */}
@@ -209,9 +182,9 @@ export default function Landing() {
 
       <main className="landing-main">
         {/* Search & Filters Bar */}
-        <div className="landing-search-bar">
+        <div className="landing-toolbar">
           {/* Search */}
-          <div className="landing-search-input">
+          <div className="landing-search">
             <SearchIcon />
             <input
               value={search}
@@ -229,7 +202,7 @@ export default function Landing() {
           </div>
 
           {/* Divider */}
-          <div className="landing-divider hide-mobile" />
+          <div className="landing-divider" />
 
           {/* Filter pills */}
           <div className="landing-filters">
@@ -237,7 +210,7 @@ export default function Landing() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`landing-filter-btn ${filter === f ? "active" : ""}`}
+                className={`landing-filter-btn${filter === f ? " active" : ""}`}
               >
                 {f === "All" ? "All Spaces" : f}
               </button>
@@ -260,46 +233,26 @@ export default function Landing() {
         {loading ? (
           <div className="room-grid">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                style={{ borderRadius: 16, overflow: 'hidden', animation: 'pulse 1.5s ease-in-out infinite' }}
-              >
-                <div style={{ height: 56, background: 'var(--cream-dk)' }} />
-                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 16px 16px', padding: 20 }}>
-                  <div style={{ height: 12, background: 'var(--cream-dk)', borderRadius: 4, width: '33%', marginBottom: 12 }} />
-                  <div style={{ height: 20, background: 'var(--cream-dk)', borderRadius: 4, width: '66%', marginBottom: 12 }} />
-                  <div style={{ height: 12, background: 'var(--cream-dk)', borderRadius: 4, width: '50%', marginBottom: 12 }} />
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <div style={{ height: 24, background: 'var(--cream-dk)', borderRadius: 8, width: 64 }} />
-                    <div style={{ height: 24, background: 'var(--cream-dk)', borderRadius: 8, width: 80 }} />
-                  </div>
-                </div>
-              </div>
+              <div key={i} className="skeleton" style={{ height: 260 }} />
             ))}
           </div>
         ) : visible.length === 0 ? (
           <div className="empty-state">
-            <div style={{ opacity: 0.3, marginBottom: 16 }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto' }}>
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </div>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, color: 'var(--navy)', marginBottom: 8 }}>
-              No spaces found
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 16 }}>
-              Try adjusting your filters or search terms.
-            </p>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <h3>No spaces found</h3>
+            <p>Try adjusting your filters or search terms.</p>
             <button
               onClick={() => { setSearch(""); setFilter("All"); }}
-              style={{ fontSize: 14, color: 'var(--shu-blue)', fontWeight: 500, cursor: 'pointer', background: 'transparent', border: 'none', fontFamily: 'var(--font-body)' }}
+              className="btn-primary"
             >
               Clear all filters
             </button>
           </div>
         ) : (
-          <div className="room-grid" style={{ marginBottom: 48 }}>
+          <div className="room-grid">
             {visible.map((room) => (
               <RoomCard
                 key={room.id}

@@ -18,8 +18,8 @@ function HeatmapCell({ value, hour, day }) {
   return (
     <div
       title={`${day} ${hour}:00 — ${Math.round(value)}%`}
-      className="rounded-sm"
-      style={{ width: 18, height: 18, background: bg, cursor: "default" }}
+      className="heatmap-cell"
+      style={{ background: bg }}
     />
   );
 }
@@ -27,8 +27,8 @@ function HeatmapCell({ value, hour, day }) {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg px-3 py-2" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", fontSize: 11 }}>
-      <p style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>{label}</p>
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
       {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color }}>
           {p.name}: {typeof p.value === "number" ? p.value.toFixed(1) : p.value}%
@@ -121,30 +121,16 @@ export default function Analytics() {
     return { grid, days, hours };
   }, [heatmap]);
 
-  const btnStyle = (active) => ({
-    padding: "4px 10px",
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: 600,
-    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-    background: active ? "var(--accent)22" : "transparent",
-    color: active ? "var(--accent)" : "var(--text-muted)",
-    cursor: "pointer",
-  });
-
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>
-          Utilization Analytics
-        </h1>
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="admin-page-header">
+        <h1 className="admin-page-title">Utilization Analytics</h1>
+        <div className="admin-page-controls">
           <select
             value={selectedBuilding}
             onChange={(e) => setSelectedBuilding(e.target.value)}
-            className="rounded-lg px-2 py-1"
-            style={{ fontSize: 11, background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+            className="form-select"
           >
             <option value="all">All Buildings</option>
             {buildings.map((b) => (
@@ -152,27 +138,25 @@ export default function Analytics() {
             ))}
           </select>
           {TIME_RANGES.map((tr) => (
-            <button key={tr.key} onClick={() => setTimeRange(tr.key)} style={btnStyle(timeRange === tr.key)}>
+            <button
+              key={tr.key}
+              onClick={() => setTimeRange(tr.key)}
+              className={`filter-btn ${timeRange === tr.key ? "active" : ""}`}
+            >
               {tr.label}
             </button>
           ))}
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg px-3 py-2" style={{ background: "var(--danger)22", color: "var(--danger)", fontSize: 12 }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="alert-danger">{error}</div>}
 
       {/* Utilization Trend */}
       {loadingUtil ? (
         <ChartSkeleton height={220} />
       ) : trendData.length > 0 ? (
-        <div className="rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <p className="mb-3" style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>
-            Utilization Trend
-          </p>
+        <div className="chart-card">
+          <p className="chart-card-title">Utilization Trend</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -188,17 +172,15 @@ export default function Analytics() {
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="rounded-xl p-6 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <p style={{ color: "var(--text-muted)", fontSize: 12 }}>No utilization data available for this range</p>
+        <div className="empty-state">
+          <p>No utilization data available for this range</p>
         </div>
       )}
 
       {/* Building Breakdown */}
       {buildingBreakdown.length > 0 && (
-        <div className="rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <p className="mb-3" style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>
-            By Building
-          </p>
+        <div className="chart-card">
+          <p className="chart-card-title">By Building</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={buildingBreakdown}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -215,23 +197,19 @@ export default function Analytics() {
       {loadingHeatmap ? (
         <ChartSkeleton height={180} />
       ) : heatmapGrid ? (
-        <div className="rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <p className="mb-3" style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>
-            Usage Heatmap
-          </p>
-          <div className="overflow-x-auto">
-            <div className="flex flex-col gap-1" style={{ minWidth: 360 }}>
+        <div className="chart-card">
+          <p className="chart-card-title">Usage Heatmap</p>
+          <div className="heatmap-scroll">
+            <div className="heatmap-grid">
               {/* Hour labels */}
-              <div className="flex gap-1 ml-10">
+              <div className="heatmap-hour-labels">
                 {heatmapGrid.hours.map((h) => (
-                  <div key={h} style={{ width: 18, textAlign: "center", fontSize: 8, color: "var(--text-muted)" }}>
-                    {h}
-                  </div>
+                  <span key={h} className="heatmap-hour-label">{h}</span>
                 ))}
               </div>
               {heatmapGrid.grid.map((row, di) => (
-                <div key={di} className="flex items-center gap-1">
-                  <span style={{ width: 36, fontSize: 9, color: "var(--text-muted)", textAlign: "right", marginRight: 4 }}>
+                <div key={di} className="heatmap-row">
+                  <span className="heatmap-day-label">
                     {heatmapGrid.days[di] || `D${di}`}
                   </span>
                   {(Array.isArray(row) ? row : []).map((val, hi) => (
@@ -241,45 +219,36 @@ export default function Analytics() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-3">
-            <span style={{ fontSize: 9, color: "var(--text-muted)" }}>Low</span>
-            <div className="flex gap-0.5">
+          <div className="heatmap-legend">
+            <span className="heatmap-legend-label">Low</span>
+            <div className="heatmap-legend-bar">
               {[0.1, 0.3, 0.5, 0.7, 0.9].map((v) => (
-                <div key={v} className="rounded-sm" style={{ width: 14, height: 10, background: `rgba(0, 230, 180, ${v})` }} />
+                <div key={v} className="heatmap-legend-swatch" style={{ background: `rgba(0, 230, 180, ${v})` }} />
               ))}
             </div>
-            <span style={{ fontSize: 9, color: "var(--text-muted)" }}>High</span>
+            <span className="heatmap-legend-label">High</span>
           </div>
         </div>
       ) : (
-        <div className="rounded-xl p-6 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <p style={{ color: "var(--text-muted)", fontSize: 12 }}>Heatmap data unavailable</p>
+        <div className="empty-state">
+          <p>Heatmap data unavailable</p>
         </div>
       )}
 
       {/* Predictive Analytics */}
-      <div className="rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-3">
-          <p style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>Predictive Analytics</p>
+      <div className="chart-card">
+        <div className="admin-page-header">
+          <p className="chart-card-title">Predictive Analytics</p>
           <button
             onClick={handlePredict}
             disabled={loadingPrediction}
-            className="rounded-lg px-3 py-1.5"
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              background: "var(--accent)",
-              color: "var(--bg-primary)",
-              border: "none",
-              cursor: loadingPrediction ? "wait" : "pointer",
-              opacity: loadingPrediction ? 0.6 : 1,
-            }}
+            className="btn btn-primary btn-sm"
           >
             {loadingPrediction ? "Forecasting..." : "Generate Forecast"}
           </button>
         </div>
         {prediction ? (
-          <div className="flex flex-col gap-3">
+          <div className="admin-card-body">
             {prediction.forecast && (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={prediction.forecast}>
@@ -292,14 +261,14 @@ export default function Analytics() {
               </ResponsiveContainer>
             )}
             {prediction.summary && (
-              <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>{prediction.summary}</p>
+              <p className="admin-card-meta">{prediction.summary}</p>
             )}
             {prediction.insights?.map((ins, i) => (
-              <p key={i} style={{ fontSize: 11, color: "var(--text-muted)" }}>&bull; {ins}</p>
+              <p key={i} className="admin-card-meta">&bull; {ins}</p>
             ))}
           </div>
         ) : (
-          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <p className="admin-card-meta">
             Click forecast to generate AI-powered utilization predictions
           </p>
         )}
