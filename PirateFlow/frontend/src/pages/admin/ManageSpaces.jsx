@@ -355,7 +355,7 @@ export default function ManageSpaces() {
           const next = { ...expanded };
           delete next[bid];
           setExpanded(next);
-          await toggleExpand(Number(bid));
+          await toggleExpand(bid);
           break;
         }
       }
@@ -372,7 +372,7 @@ export default function ManageSpaces() {
     try {
       await api.updateRoom(form.id, form);
       setFormOpen(null);
-      const ids = Object.keys(expanded).map(Number);
+      const ids = Object.keys(expanded);
       setExpanded({});
       for (const id of ids) await toggleExpand(id);
     } catch (err) {
@@ -387,7 +387,7 @@ export default function ManageSpaces() {
     setSaving(true);
     try {
       await api.deleteRoom(roomId);
-      const ids = Object.keys(expanded).map(Number);
+      const ids = Object.keys(expanded);
       setExpanded({});
       for (const id of ids) await toggleExpand(id);
       await fetchBuildings();
