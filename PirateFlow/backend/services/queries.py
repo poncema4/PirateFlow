@@ -777,8 +777,14 @@ async def set_room_equipment(db, room_id, equipment_list):
 
 async def delete_room(db, room_id):
     """Delete a room and related data."""
+    await db.execute("DELETE FROM alerts WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM access_events WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM access_rules WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM bookings WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM usage_stats WHERE room_id = ?", (room_id,))
     await db.execute("DELETE FROM room_equipment WHERE room_id = ?", (room_id,))
     await db.execute("DELETE FROM room_occupancy WHERE room_id = ?", (room_id,))
+    await db.execute("UPDATE campus_events SET room_id = NULL WHERE room_id = ?", (room_id,))
     await db.execute("DELETE FROM cameras WHERE room_id = ?", (room_id,))
     await db.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
     await db.commit()
