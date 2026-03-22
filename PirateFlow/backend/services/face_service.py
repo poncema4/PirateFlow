@@ -273,6 +273,7 @@ async def register_face(user_id: str, image_bytes: bytes, user_name: str = "") -
     """
     Register or update face encodings for a user from a single ID photo.
     Generates multiple augmented encodings for robust matching.
+    Persists the image to disk and DB for reload across restarts.
     Returns True if at least one face encoding was extracted, False otherwise.
     """
     encodings = await asyncio.to_thread(_register_with_augmentation, image_bytes)
@@ -281,6 +282,32 @@ async def register_face(user_id: str, image_bytes: bytes, user_name: str = "") -
     _face_registry[user_id] = encodings
     if user_name:
         _user_names[user_id] = user_name
+
+    # Persist image to disk + DB
+    try:
+        import os
+        faces_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "faces")
+        os.makedirs(faces_dir, exist_ok=True)
+        filename = f"{user_id}.jpg"
+        filepath = os.path.join(faces_dir, filename)
+        with open(filepath, "wb") as f:
+            f.write(image_bytes)
+
+        from services.database import get_db
+        db = await get_db()
+        face_id = f"face_{uuid.uuid4().hex[:8]}"
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        label = user_name or user_id
+        # Remove old enrollment
+        await db.execute("DELETE FROM enrolled_faces WHERE user_id = ?", (user_id,))
+        await db.execute(
+            "INSERT INTO enrolled_faces VALUES (?,?,?,?,?,1)",
+            (face_id, user_id, f"faces/{filename}", label, now),
+        )
+        await db.commit()
+    except Exception as e:
+        print(f"[face_service] DB persistence failed (non-fatal): {e}")
+
     print(f"[face_service] Registered {len(encodings)} augmented encodings for {user_name or user_id}")
     return True
 
@@ -297,22 +324,18 @@ async def identify_face(image_bytes: bytes) -> Optional[tuple[str, float]]:
     return await asyncio.to_thread(_match_face, encoding)
 
 
-def check_booking_validity(user_id: str, room_id: str) -> bool:
-    """
-    Check if the user has a confirmed booking for this room right now.
-    Uses stub bookings until Role 1 delivers real DB queries.
-    """
-    from routers.bookings import STUB_BOOKINGS as _STUB_BOOKINGS
-    now = datetime.now(timezone.utc)
-    for booking in _STUB_BOOKINGS:
-        if (
-            booking.user_id == user_id
-            and booking.room_id == room_id
-            and booking.status.value == "confirmed"
-            and booking.start_time <= now <= booking.end_time
-        ):
-            return True
-    return False
+async def check_booking_validity(user_id: str, room_id: str) -> bool:
+    """Check if the user has a confirmed booking for this room right now."""
+    from services.database import get_db
+    db = await get_db()
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cursor = await db.execute("""
+        SELECT COUNT(*) FROM bookings
+        WHERE user_id = ? AND room_id = ? AND status = 'confirmed'
+        AND start_time <= ? AND end_time >= ?
+    """, (user_id, room_id, now, now))
+    count = (await cursor.fetchone())[0]
+    return count > 0
 
 
 def log_access(
@@ -342,11 +365,65 @@ def log_access(
     return entry
 
 
-def remove_face(user_id: str) -> bool:
-    """Remove a user's face encoding. Returns True if it existed."""
+async def remove_face(user_id: str) -> bool:
+    """Remove a user's face encoding from memory, disk, and DB."""
     removed = _face_registry.pop(user_id, None) is not None
     _user_names.pop(user_id, None)
+
+    try:
+        import os
+        faces_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "faces")
+        filepath = os.path.join(faces_dir, f"{user_id}.jpg")
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+        from services.database import get_db
+        db = await get_db()
+        await db.execute("DELETE FROM enrolled_faces WHERE user_id = ?", (user_id,))
+        await db.commit()
+    except Exception as e:
+        print(f"[face_service] DB cleanup failed (non-fatal): {e}")
+
     return removed
+
+
+async def load_enrolled_faces():
+    """Load all enrolled face images from DB and compute encodings.
+    Called on startup to restore face registry across restarts.
+    """
+    import os
+    try:
+        from services.database import get_db
+        db = await get_db()
+        cursor = await db.execute("""
+            SELECT ef.user_id, ef.face_image_path, ef.label,
+                   u.first_name || ' ' || u.last_name AS user_name
+            FROM enrolled_faces ef
+            JOIN users u ON ef.user_id = u.id
+            WHERE ef.is_active = 1
+        """)
+        rows = await cursor.fetchall()
+
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        loaded = 0
+        for row in rows:
+            filepath = os.path.join(base_dir, row["face_image_path"])
+            if not os.path.exists(filepath):
+                continue
+
+            with open(filepath, "rb") as f:
+                image_bytes = f.read()
+
+            encodings = await asyncio.to_thread(_register_with_augmentation, image_bytes)
+            if encodings:
+                _face_registry[row["user_id"]] = encodings
+                _user_names[row["user_id"]] = row["user_name"] or row["label"]
+                loaded += 1
+
+        if loaded:
+            print(f"[face_service] Loaded {loaded} enrolled faces from DB")
+    except Exception as e:
+        print(f"[face_service] Failed to load enrolled faces: {e}")
 
 
 def get_registered_count() -> int:

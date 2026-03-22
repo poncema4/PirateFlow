@@ -8,13 +8,6 @@ import BuildingCard from "../../components/feed/BuildingCard";
 import ActivityFeed from "../../components/feed/ActivityFeed";
 import { StatsCardSkeleton, BuildingCardSkeleton } from "../../components/common/LoadingSkeleton";
 
-const DEMO_MESSAGES = [
-  { type: "occupancy", msg: (b) => `${b} occupancy updated to ${Math.floor(Math.random() * 80 + 10)}%` },
-  { type: "booking", msg: () => `New booking confirmed for Room ${Math.floor(Math.random() * 300 + 100)}` },
-  { type: "booking", msg: () => `Booking cancelled for Room ${Math.floor(Math.random() * 300 + 100)}` },
-  { type: "anomaly", msg: () => `Unusual access pattern detected at Door ${Math.floor(Math.random() * 20 + 1)}` },
-  { type: "occupancy", msg: (b) => `${b} capacity warning — approaching limit` },
-];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -89,18 +82,6 @@ export default function Dashboard() {
       ws.off("anomaly_alert", handleAnomaly);
     };
   }, [ws, addActivity]);
-
-  // Demo simulation — generates client-side fake events for demo purposes
-  useEffect(() => {
-    const names = buildings.map((b) => b.name).filter(Boolean);
-    if (names.length === 0) return;
-    const interval = setInterval(() => {
-      const tmpl = DEMO_MESSAGES[Math.floor(Math.random() * DEMO_MESSAGES.length)];
-      const bName = names[Math.floor(Math.random() * names.length)];
-      addActivity(tmpl.type, tmpl.msg(bName));
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [buildings, addActivity]);
 
   // Computed stats
   const totalRooms = buildings.reduce((s, b) => s + (b.room_count || 0), 0);

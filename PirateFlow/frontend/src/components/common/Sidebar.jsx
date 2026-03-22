@@ -3,12 +3,15 @@ import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 
 const adminNavItems = [
-  { path: "/dashboard", label: "Dashboard", icon: "\u2B21" },
-  { path: "/",          label: "Spaces",    icon: "\u25EB" },
-  { path: "/bookings",  label: "Bookings",  icon: "\u25F7" },
-  { path: "/analytics", label: "Analytics", icon: "\u25C8" },
-  { path: "/revenue",   label: "Revenue",   icon: "\u25CE" },
-  { path: "/alerts",    label: "Alerts",    icon: "\u25EC" },
+  { path: "/dashboard",      label: "Dashboard",      icon: "\u2B21" },
+  { path: "/",               label: "Spaces",          icon: "\u25EB" },
+  { path: "/bookings",       label: "Bookings",        icon: "\u25F7" },
+  { path: "/analytics",      label: "Analytics",       icon: "\u25C8" },
+  { path: "/revenue",        label: "Revenue",         icon: "\u25CE" },
+  { path: "/alerts",         label: "Alerts",          icon: "\u25EC" },
+  { path: "/admin/spaces",   label: "Manage Spaces",   icon: "\u2692" },
+  { path: "/admin/users",    label: "Manage Users",    icon: "\u2603" },
+  { path: "/admin/cameras",  label: "Cameras",         icon: "\u25CE" },
 ];
 
 const studentNavItems = [
