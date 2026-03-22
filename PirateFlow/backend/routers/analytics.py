@@ -93,29 +93,3 @@ async def department_usage_endpoint(
     db = await get_db()
     rows = await get_usage_by_department(db, sd, ed)
     return [DepartmentUsage(**r) for r in rows]
-
-
-# ---------------------------------------------------------------------------
-# Revenue
-# ---------------------------------------------------------------------------
-
-@router.get("/revenue", response_model=RevenueSummary)
-async def revenue_endpoint(
-    start_date: str = "2026-01-01",
-    end_date: str = "2026-03-21",
-    building_id: Optional[str] = None,
-):
-    """Return revenue summary."""
-    db = await get_db()
-    result = await get_revenue_summary(db, start_date, end_date, building_id)
-    return RevenueSummary(**result)
-
-
-@router.get("/revenue/opportunity", response_model=dict)
-async def revenue_opportunity_endpoint(
-    start_date: str = "2026-01-01",
-    end_date: str = "2026-03-21",
-):
-    """Return untapped revenue potential from underutilized spaces."""
-    db = await get_db()
-    return await get_revenue_opportunity(db, start_date, end_date)
