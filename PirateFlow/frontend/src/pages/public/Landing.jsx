@@ -18,12 +18,12 @@ function SearchIcon() {
 /* ─── Room Card ──────────────────────────────────────────────────────── */
 function RoomCard({ room, onClick, onBook }) {
   const available = room.status === "available";
-  const bookable = room.is_bookable && room.status !== "maintenance" && room.status !== "closed";
+  const underMaintenance = room.status === "maintenance";
 
   return (
     <div
       onClick={() => onClick(room)}
-      className={`room-card${!bookable ? " disabled" : ""}`}
+      className={`room-card${underMaintenance ? " disabled" : ""}`}
     >
       {/* Type header */}
       <div className="room-card-type">
@@ -71,7 +71,9 @@ function RoomCard({ room, onClick, onBook }) {
 
       {/* Footer */}
       <div className="room-card-footer">
-        {bookable ? (
+        {underMaintenance ? (
+          <span className="room-card-avail">Under maintenance</span>
+        ) : (
           <>
             <span className="room-card-avail">
               {available
@@ -86,10 +88,6 @@ function RoomCard({ room, onClick, onBook }) {
               Book Now
             </button>
           </>
-        ) : (
-          <span className="room-card-unavailable-label">
-            {room.status === "maintenance" ? "Under maintenance" : "Unavailable"}
-          </span>
         )}
       </div>
     </div>
