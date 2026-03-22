@@ -16,7 +16,7 @@ from services.queries import (
     create_room, update_room, delete_room,
 )
 
-router = APIRouter(prefix="/api/rooms", tags=["rooms"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/api/rooms", tags=["rooms"])
 
 
 @router.get("", response_model=PaginatedResponse)
