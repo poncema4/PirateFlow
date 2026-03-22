@@ -464,6 +464,128 @@ async def get_usage_by_department(db, start_date="2026-01-01", end_date="2026-03
              "total_bookings": r["total_bookings"]} for r in rows]
 
 
+async def get_analytics_summary(db, start_date="2026-01-01", end_date="2026-03-21"):
+    """Return high-level summary stats for the analytics dashboard."""
+    sd, ed = f"{start_date}T00:00:00Z", f"{end_date}T23:59:59Z"
+
+    # Total bookings
+    cursor = await db.execute(
+        "SELECT COUNT(*) FROM bookings WHERE status != 'cancelled' AND start_time >= ? AND start_time <= ?",
+        (sd, ed),
+    )
+    total_bookings = (await cursor.fetchone())[0]
+
+    # Average unique users per day
+    cursor = await db.execute("""
+        SELECT AVG(daily_users) FROM (
+            SELECT date(start_time) AS d, COUNT(DISTINCT user_id) AS daily_users
+            FROM bookings
+            WHERE status != 'cancelled' AND start_time >= ? AND start_time <= ?
+            GROUP BY d
+        )
+    """, (sd, ed))
+    row = await cursor.fetchone()
+    avg_daily_users = round(row[0] or 0, 1)
+
+    # Most popular room type
+    cursor = await db.execute("""
+        SELECT r.room_type, COUNT(*) AS cnt
+        FROM bookings bk
+        JOIN rooms r ON bk.room_id = r.id
+        WHERE bk.status != 'cancelled' AND bk.start_time >= ? AND bk.start_time <= ?
+        GROUP BY r.room_type
+        ORDER BY cnt DESC
+        LIMIT 1
+    """, (sd, ed))
+    pop_row = await cursor.fetchone()
+    most_popular_type = pop_row["room_type"] if pop_row else "N/A"
+    most_popular_type_count = pop_row["cnt"] if pop_row else 0
+
+    # Average booking duration (hours)
+    cursor = await db.execute("""
+        SELECT AVG((julianday(end_time) - julianday(start_time)) * 24) AS avg_hrs
+        FROM bookings
+        WHERE status != 'cancelled' AND start_time >= ? AND start_time <= ?
+    """, (sd, ed))
+    avg_row = await cursor.fetchone()
+    avg_duration_hrs = round(avg_row["avg_hrs"] or 0, 1)
+
+    # Total unique users
+    cursor = await db.execute(
+        "SELECT COUNT(DISTINCT user_id) FROM bookings WHERE status != 'cancelled' AND start_time >= ? AND start_time <= ?",
+        (sd, ed),
+    )
+    total_unique_users = (await cursor.fetchone())[0]
+
+    return {
+        "total_bookings": total_bookings,
+        "avg_daily_users": avg_daily_users,
+        "most_popular_type": most_popular_type,
+        "most_popular_type_count": most_popular_type_count,
+        "avg_duration_hrs": avg_duration_hrs,
+        "total_unique_users": total_unique_users,
+    }
+
+
+async def get_room_type_popularity(db, start_date="2026-01-01", end_date="2026-03-21"):
+    """Return booking counts and total hours grouped by room type."""
+    sql = """
+        SELECT r.room_type,
+               COUNT(*) AS total_bookings,
+               ROUND(SUM((julianday(bk.end_time) - julianday(bk.start_time)) * 24), 1) AS total_hours
+        FROM bookings bk
+        JOIN rooms r ON bk.room_id = r.id
+        WHERE bk.status != 'cancelled'
+        AND bk.start_time >= ? AND bk.start_time <= ?
+        GROUP BY r.room_type
+        ORDER BY total_bookings DESC
+    """
+    cursor = await db.execute(sql, (f"{start_date}T00:00:00Z", f"{end_date}T23:59:59Z"))
+    rows = await cursor.fetchall()
+    return [{"room_type": r["room_type"], "total_bookings": r["total_bookings"],
+             "total_hours": r["total_hours"] or 0} for r in rows]
+
+
+async def get_top_rooms(db, start_date="2026-01-01", end_date="2026-03-21", limit=10):
+    """Return the most booked rooms."""
+    sql = """
+        SELECT r.name AS room_name, b.name AS building_name, r.room_type, r.capacity,
+               COUNT(*) AS total_bookings,
+               ROUND(SUM((julianday(bk.end_time) - julianday(bk.start_time)) * 24), 1) AS total_hours
+        FROM bookings bk
+        JOIN rooms r ON bk.room_id = r.id
+        JOIN floors f ON r.floor_id = f.id
+        JOIN buildings b ON f.building_id = b.id
+        WHERE bk.status != 'cancelled'
+        AND bk.start_time >= ? AND bk.start_time <= ?
+        GROUP BY r.id
+        ORDER BY total_bookings DESC
+        LIMIT ?
+    """
+    cursor = await db.execute(sql, (f"{start_date}T00:00:00Z", f"{end_date}T23:59:59Z", limit))
+    rows = await cursor.fetchall()
+    return [{"room_name": r["room_name"], "building_name": r["building_name"],
+             "room_type": r["room_type"], "capacity": r["capacity"],
+             "total_bookings": r["total_bookings"], "total_hours": r["total_hours"] or 0}
+            for r in rows]
+
+
+async def get_booking_type_breakdown(db, start_date="2026-01-01", end_date="2026-03-21"):
+    """Return booking counts grouped by booking_type."""
+    sql = """
+        SELECT booking_type, COUNT(*) AS total_bookings
+        FROM bookings
+        WHERE status != 'cancelled'
+        AND start_time >= ? AND start_time <= ?
+        GROUP BY booking_type
+        ORDER BY total_bookings DESC
+    """
+    cursor = await db.execute(sql, (f"{start_date}T00:00:00Z", f"{end_date}T23:59:59Z"))
+    rows = await cursor.fetchall()
+    return [{"booking_type": r["booking_type"], "total_bookings": r["total_bookings"]}
+            for r in rows]
+
+
 async def get_revenue_summary(db, start_date="2026-01-01", end_date="2026-03-21", building_id=None):
     """Return revenue breakdown."""
     conditions = ["rev.created_at >= ? AND rev.created_at <= ?"]

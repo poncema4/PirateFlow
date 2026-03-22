@@ -297,6 +297,35 @@ class DepartmentUsage(BaseModel):
     total_bookings: int
 
 
+class AnalyticsSummary(BaseModel):
+    total_bookings: int
+    avg_daily_users: float
+    most_popular_type: str
+    most_popular_type_count: int
+    avg_duration_hrs: float
+    total_unique_users: int
+
+
+class RoomTypePopularity(BaseModel):
+    room_type: str
+    total_bookings: int
+    total_hours: float
+
+
+class TopRoom(BaseModel):
+    room_name: str
+    building_name: str
+    room_type: str
+    capacity: int
+    total_bookings: int
+    total_hours: float
+
+
+class BookingTypeBreakdown(BaseModel):
+    booking_type: str
+    total_bookings: int
+
+
 # ---------------------------------------------------------------------------
 # Revenue
 # ---------------------------------------------------------------------------
