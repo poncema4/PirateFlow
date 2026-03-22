@@ -125,10 +125,10 @@ export default function Dashboard() {
           Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)
         ) : (
           <>
-            <StatsCard label="Buildings" value={buildings.length} sub="Total monitored" accent icon="buildings" />
-            <StatsCard label="Total Rooms" value={totalRooms} sub={`${occupiedRooms} occupied`} icon="rooms" />
-            <StatsCard label="Avg Occupancy" value={`${avgOccupancy}%`} sub="Across all buildings" accent={avgOccupancy > 40} danger={avgOccupancy > 75} icon="occupancy" />
-            <StatsCard label="High Occupancy" value={highOccupancy} sub="Buildings > 75%" danger={highOccupancy > 0} icon="alert" />
+            <StatsCard label="Buildings" value={buildings.length} sub="Total monitored" accent icon="buildings" onClick={() => navigate("/admin/spaces")} />
+            <StatsCard label="Total Rooms" value={totalRooms} sub={`${occupiedRooms} occupied`} icon="rooms" onClick={() => navigate("/admin/spaces")} />
+            <StatsCard label="Avg Occupancy" value={`${avgOccupancy}%`} sub="Across all buildings" accent={avgOccupancy > 40} danger={avgOccupancy > 75} icon="occupancy" onClick={() => navigate("/analytics")} />
+            <StatsCard label="High Occupancy" value={highOccupancy} sub="Buildings > 75%" danger={highOccupancy > 0} icon="alert" onClick={() => navigate("/alerts")} />
           </>
         )}
       </div>
@@ -154,7 +154,7 @@ export default function Dashboard() {
             {loading
               ? Array.from({ length: 6 }).map((_, i) => <BuildingCardSkeleton key={i} />)
               : buildings.map((b) => (
-                  <BuildingCard key={b.id} building={b} onClick={() => navigate(`/buildings/${b.id}`)} />
+                  <BuildingCard key={b.id} building={b} onClick={() => navigate(`/spaces/${b.id}`)} />
                 ))}
             {!loading && buildings.length === 0 && (
               <div className="empty-state">

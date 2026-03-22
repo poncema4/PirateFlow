@@ -39,7 +39,7 @@ function StatsIcon({ type }) {
   return icons[type] || icons.buildings;
 }
 
-export default function StatsCard({ label, value, sub, accent = false, danger = false, trend = null, icon = null }) {
+export default function StatsCard({ label, value, sub, accent = false, danger = false, trend = null, icon = null, onClick = null }) {
   const trendColor = trend?.direction === "up" ? "var(--success)" : "var(--danger)";
   const trendArrow = trend?.direction === "up" ? "\u2191" : "\u2193";
 
@@ -53,8 +53,9 @@ export default function StatsCard({ label, value, sub, accent = false, danger = 
 
   return (
     <div
-      className="stats-card"
+      className={`stats-card${onClick ? " stats-card-clickable" : ""}`}
       style={{ borderTop: `3px solid ${colors.topBorder}` }}
+      onClick={onClick}
     >
       <div className="stats-card-top">
         <p className="stats-card-label">{label}</p>

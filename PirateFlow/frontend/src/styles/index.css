@@ -488,6 +488,8 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius-lg); padding: 18px; display: flex; flex-direction: column; gap: 10px;
   background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
 }
+.stats-card-clickable { cursor: pointer; }
+.stats-card-clickable:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .stats-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
 .stats-card-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 .stats-card-icon { width: 34px; height: 34px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; }
