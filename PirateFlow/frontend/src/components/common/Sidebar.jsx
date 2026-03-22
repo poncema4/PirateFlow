@@ -8,7 +8,6 @@ const adminNavItems = [
   { path: "/bookings",       label: "Bookings",        icon: "bookings" },
   { path: "/events",         label: "Events",          icon: "bookings" },
   { path: "/analytics",      label: "Analytics",       icon: "analytics" },
-  { path: "/revenue",        label: "Revenue",         icon: "revenue" },
   { path: "/alerts",         label: "Alerts",          icon: "alerts" },
   { path: "/admin/users",    label: "Manage Users",    icon: "users" },
   { path: "/admin/cameras",  label: "Cameras",         icon: "cameras" },
