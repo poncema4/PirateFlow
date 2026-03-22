@@ -17,7 +17,7 @@ export const tokenStorage = {
 
 // ─── Axios Instance ─────────────────────────────────────────────────────────
 const apiClient = axios.create({
-  baseURL: import.meta.env.PROD ? "https://api.pirateflow.net/api" : "/api",
+  baseURL: "/api",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -51,19 +51,7 @@ apiClient.interceptors.response.use(
 
       isRefreshing = true;
       try {
-<<<<<<< Updated upstream
-<<<<<<< HEAD
         const { data } = await axios.post("/api/auth/refresh", {
-=======
-        // Use raw axios (not apiClient) to avoid interceptor loop
-        const refreshURL = import.meta.env.PROD
-          ? "https://api.pirateflow.net/api/auth/refresh"
-          : "/api/auth/refresh";
-        const { data } = await axios.post(refreshURL, {
->>>>>>> benk-branch
-=======
-        const { data } = await axios.post("/api/auth/refresh", {
->>>>>>> Stashed changes
           refresh_token: tokenStorage.getRefresh(),
         });
         tokenStorage.set(data.access_token, null);
