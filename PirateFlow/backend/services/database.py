@@ -126,14 +126,16 @@ async def _create_tables(db: aiosqlite.Connection):
         role    TEXT NOT NULL DEFAULT 'member'
     );
 
-    -- Face images for detection. New visitors get added here manually.
+    -- Face encodings for recognition. Stored as binary blobs (not images).
+    -- Encodings are 128-d float arrays — one-way, not reversible to images.
     CREATE TABLE IF NOT EXISTS enrolled_faces (
         id              TEXT PRIMARY KEY,
         user_id         TEXT NOT NULL REFERENCES users(id),
-        face_image_path TEXT NOT NULL,
+        face_image_path TEXT,
         label           TEXT NOT NULL,
         enrolled_at     TEXT NOT NULL,
-        is_active       INTEGER NOT NULL DEFAULT 1
+        is_active       INTEGER NOT NULL DEFAULT 1,
+        encodings_blob  BLOB
     );
 
     -- =======================================================================
@@ -238,6 +240,27 @@ async def _create_tables(db: aiosqlite.Connection):
         primary_major         TEXT,
         primary_club          TEXT,
         unauthorized_attempts INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- =======================================================================
+    -- CAMPUS EVENTS (scraped from SHU CampusLabs)
+    -- =======================================================================
+
+    CREATE TABLE IF NOT EXISTS campus_events (
+        id              TEXT PRIMARY KEY,
+        external_id     TEXT UNIQUE,
+        name            TEXT NOT NULL,
+        description     TEXT,
+        location        TEXT,
+        starts_at       TEXT NOT NULL,
+        ends_at         TEXT,
+        image_url       TEXT,
+        organization    TEXT,
+        category_names  TEXT,
+        scraped_at      TEXT NOT NULL,
+        building_id     TEXT REFERENCES buildings(id),
+        room_id         TEXT REFERENCES rooms(id),
+        booking_id      TEXT REFERENCES bookings(id)
     );
 
     -- =======================================================================

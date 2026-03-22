@@ -35,9 +35,9 @@ from models.schemas import AccessLogEntry
 # Configuration
 # ---------------------------------------------------------------------------
 
-MATCH_TOLERANCE = 0.58  # Balanced: 0.5 was too strict, 0.6 is library default
+MATCH_TOLERANCE = 0.55  # Tighter tolerance — ID photos are high quality, we can be stricter
 DETECTION_MODEL = "cnn"  # "cnn" is more accurate than "hog", slower but fine for our scale
-NUM_JITTERS = 3  # Re-sample each face N times and average — more stable encodings
+NUM_JITTERS = 5  # More re-samples = more stable encodings (worth the extra time at registration)
 
 # ---------------------------------------------------------------------------
 # In-memory stores
@@ -77,12 +77,24 @@ def _pil_to_array(image: Image.Image) -> np.ndarray:
 
 def _normalize_frame(image: Image.Image) -> Image.Image:
     """
-    Normalize a webcam frame for better face matching.
-    - Auto-contrast to handle varying lighting
-    - Slight sharpness boost for webcam blur
+    Normalize a camera frame to bridge the gap with studio ID photos.
+    ID photos: even lighting, sharp, front-facing, good contrast.
+    Camera frames: uneven lighting, motion blur, angles, variable contrast.
+
+    This preprocessing makes camera frames look more like ID photos.
     """
-    image = ImageOps.autocontrast(image, cutoff=1)
-    image = ImageEnhance.Sharpness(image).enhance(1.3)
+    # Auto-contrast — normalizes exposure to match ID photo levels
+    image = ImageOps.autocontrast(image, cutoff=2)
+
+    # Boost contrast slightly — ID photos have good contrast
+    image = ImageEnhance.Contrast(image).enhance(1.15)
+
+    # Sharpen — compensates for motion blur and camera softness
+    image = ImageEnhance.Sharpness(image).enhance(1.5)
+
+    # Normalize color balance — reduces fluorescent light color cast
+    image = ImageEnhance.Color(image).enhance(0.9)
+
     return image
 
 
@@ -93,44 +105,94 @@ def _apply_gamma(image: Image.Image, gamma: float) -> Image.Image:
     return Image.fromarray((corrected * 255).astype(np.uint8))
 
 
+def _perspective_transform(image: Image.Image, direction: str, strength: float = 0.08) -> Image.Image:
+    """Simulate a slight perspective shift as if the face were viewed from an angle.
+    This helps match ID headshots (front-facing) against security camera angles.
+    """
+    w, h = image.size
+    s = strength
+    if direction == "left":
+        # Face turned slightly left (camera sees right side more)
+        coeffs = [1 + s, s, 0, -s * 0.5, 1, 0, s / w, 0]
+    elif direction == "right":
+        coeffs = [1 + s, -s, 0, s * 0.5, 1, 0, -s / w, 0]
+    elif direction == "up":
+        # Camera is above looking down (common for security cameras)
+        coeffs = [1, 0, 0, 0, 1 + s, -s * h * 0.1, 0, s / h]
+    else:  # down
+        coeffs = [1, 0, 0, 0, 1 + s, s * h * 0.05, 0, -s / h]
+    try:
+        return image.transform(image.size, Image.PERSPECTIVE, coeffs, Image.BILINEAR)
+    except Exception:
+        return image
+
+
 def _generate_augmented_images(image: Image.Image) -> list[Image.Image]:
     """
-    Generate augmented versions of a single ID photo for robust matching.
-    Returns a list of PIL Images including the original.
-    More variations = more robust matching from a single photo.
+    Generate augmented versions of a single ID headshot for robust matching
+    against security camera footage.
+
+    ID photos are front-facing, controlled lighting. Security cameras have:
+    - Different angles (above, side)
+    - Hallway/fluorescent lighting
+    - Motion blur, lower resolution
+    - Different distances
+
+    We generate variations to cover these differences.
     """
     augmented = []
 
+    # --- Core variations ---
     # 1. Original (normalized)
     augmented.append(ImageOps.autocontrast(image, cutoff=1))
 
-    # 2. Horizontal flip (covers mirror-image webcam setups)
+    # 2. Horizontal flip (webcam mirror + walking from either side)
     augmented.append(ImageOps.mirror(image))
 
-    # 3-4. Brightness variations
-    augmented.append(ImageEnhance.Brightness(image).enhance(1.25))
-    augmented.append(ImageEnhance.Brightness(image).enhance(0.75))
+    # --- Lighting variations (hallway vs studio) ---
+    # 3-4. Brightness (hallway lighting varies a lot)
+    augmented.append(ImageEnhance.Brightness(image).enhance(1.3))
+    augmented.append(ImageEnhance.Brightness(image).enhance(0.7))
 
-    # 5-6. Contrast variations
-    augmented.append(ImageEnhance.Contrast(image).enhance(1.3))
-    augmented.append(ImageEnhance.Contrast(image).enhance(0.7))
+    # 5-6. Contrast (security cameras often have low contrast)
+    augmented.append(ImageEnhance.Contrast(image).enhance(1.4))
+    augmented.append(ImageEnhance.Contrast(image).enhance(0.6))
 
-    # 7-8. Gamma correction (simulates harsh overhead vs. dim lighting)
-    augmented.append(_apply_gamma(image, 0.7))  # Brighter shadows
-    augmented.append(_apply_gamma(image, 1.4))  # Darker overall
+    # 7-8. Gamma (overhead fluorescent = harsh shadows from above)
+    augmented.append(_apply_gamma(image, 0.6))
+    augmented.append(_apply_gamma(image, 1.5))
 
-    # 9-10. Slight rotations (head tilt)
-    augmented.append(image.rotate(5, resample=Image.BILINEAR, expand=False, fillcolor=(128, 128, 128)))
-    augmented.append(image.rotate(-5, resample=Image.BILINEAR, expand=False, fillcolor=(128, 128, 128)))
+    # --- Angle variations (ID is front-facing, camera is not) ---
+    # 9-12. Perspective transforms simulating different camera angles
+    augmented.append(_perspective_transform(image, "left"))
+    augmented.append(_perspective_transform(image, "right"))
+    augmented.append(_perspective_transform(image, "up"))    # camera above
+    augmented.append(_perspective_transform(image, "up", 0.12))  # more extreme above angle
 
-    # 11. Combined: bright + high contrast (harsh fluorescent lighting)
-    augmented.append(ImageEnhance.Contrast(ImageEnhance.Brightness(image).enhance(1.15)).enhance(1.2))
+    # 13-16. Head tilt/rotation (people don't walk perfectly straight)
+    augmented.append(image.rotate(8, resample=Image.BILINEAR, expand=False, fillcolor=(128, 128, 128)))
+    augmented.append(image.rotate(-8, resample=Image.BILINEAR, expand=False, fillcolor=(128, 128, 128)))
+    augmented.append(image.rotate(15, resample=Image.BILINEAR, expand=False, fillcolor=(128, 128, 128)))
+    augmented.append(image.rotate(-15, resample=Image.BILINEAR, expand=False, fillcolor=(128, 128, 128)))
 
-    # 12. Combined: dark + low contrast (dim room)
-    augmented.append(ImageEnhance.Contrast(ImageEnhance.Brightness(image).enhance(0.85)).enhance(0.8))
+    # --- Combined variations (realistic scenarios) ---
+    # 17. Harsh fluorescent hallway: bright + high contrast + slight angle
+    harsh = ImageEnhance.Contrast(ImageEnhance.Brightness(image).enhance(1.2)).enhance(1.3)
+    augmented.append(_perspective_transform(harsh, "up"))
 
-    # 13. Mirrored + brightness (webcam mirror with different lighting)
-    augmented.append(ImageEnhance.Brightness(ImageOps.mirror(image)).enhance(1.2))
+    # 18. Dim hallway: dark + low contrast
+    dim = ImageEnhance.Contrast(ImageEnhance.Brightness(image).enhance(0.8)).enhance(0.7)
+    augmented.append(dim)
+
+    # 19. Mirrored + camera angle (walking toward camera from the other side)
+    augmented.append(_perspective_transform(ImageOps.mirror(image), "up"))
+
+    # 20. Slightly blurred (motion blur / distance from camera)
+    try:
+        from PIL import ImageFilter
+        augmented.append(image.filter(ImageFilter.GaussianBlur(radius=1)))
+    except Exception:
+        pass
 
     return augmented
 
@@ -188,24 +250,48 @@ def _extract_encoding_from_pil(image: Image.Image, fast: bool = False) -> Option
 
 
 def _extract_encoding_webcam(image_bytes: bytes) -> Optional[np.ndarray]:
-    """Extract face encoding from a webcam/RTSP frame with preprocessing.
-    Uses HOG for speed -- verification needs to be fast for live feeds.
+    """Extract face encoding from a camera frame with enhanced preprocessing.
+
+    Tries multiple approaches to maximize match rate against ID photos:
+    1. Normalized frame + CNN detection (most accurate)
+    2. Normalized frame + HOG detection (faster fallback)
+    3. Raw frame + HOG (in case normalization hurts)
     """
     try:
         pil_image = _bytes_to_pil(image_bytes)
-        pil_image = _normalize_frame(pil_image)
-        rgb_array = _pil_to_array(pil_image)
     except Exception:
         return None
 
-    face_locations = face_recognition.face_locations(rgb_array, model="hog")
-    if not face_locations:
-        return None
+    # Attempt 1: Normalized + CNN (best quality)
+    normalized = _normalize_frame(pil_image)
+    rgb_array = _pil_to_array(normalized)
 
-    encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=1)
-    if not encodings:
-        return None
-    return encodings[0]
+    try:
+        face_locations = face_recognition.face_locations(rgb_array, model="cnn")
+    except Exception:
+        face_locations = []
+
+    if face_locations:
+        encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=2)
+        if encodings:
+            return encodings[0]
+
+    # Attempt 2: Normalized + HOG (faster)
+    face_locations = face_recognition.face_locations(rgb_array, model="hog")
+    if face_locations:
+        encodings = face_recognition.face_encodings(rgb_array, face_locations[:1], num_jitters=2)
+        if encodings:
+            return encodings[0]
+
+    # Attempt 3: Raw frame + HOG (maybe normalization removed important features)
+    raw_array = _pil_to_array(pil_image)
+    face_locations = face_recognition.face_locations(raw_array, model="hog")
+    if face_locations:
+        encodings = face_recognition.face_encodings(raw_array, face_locations[:1], num_jitters=1)
+        if encodings:
+            return encodings[0]
+
+    return None
 
 
 def _register_with_augmentation(image_bytes: bytes) -> list[np.ndarray]:
@@ -239,26 +325,43 @@ def _match_face(encoding: np.ndarray) -> Optional[tuple[str, float]]:
     Each user has multiple augmented encodings — we check against all of them
     and use the best (lowest distance) match.
 
+    Uses two thresholds:
+    - MATCH_TOLERANCE (0.55): high confidence match
+    - MATCH_TOLERANCE + 0.07 (0.62): second-chance match, only if the best
+      match is significantly better than the second-best (gap > 0.05)
+
     Returns (user_id, confidence) or None if no match.
-    Confidence is 1.0 - distance (higher = better match).
     """
     if not _face_registry:
         return None
 
-    best_user_id = None
-    best_distance = float("inf")
+    results = []  # (distance, user_id)
 
     try:
         for user_id, user_encodings in _face_registry.items():
             distances = face_recognition.face_distance(user_encodings, encoding)
             min_distance = float(np.min(distances))
-            if min_distance < best_distance:
-                best_distance = min_distance
-                best_user_id = user_id
+            results.append((min_distance, user_id))
 
-        if best_distance <= MATCH_TOLERANCE and best_user_id is not None:
-            confidence = round(1.0 - best_distance, 3)
-            return best_user_id, confidence
+        if not results:
+            return None
+
+        results.sort(key=lambda x: x[0])
+        best_dist, best_uid = results[0]
+
+        # High confidence match
+        if best_dist <= MATCH_TOLERANCE:
+            return best_uid, round(1.0 - best_dist, 3)
+
+        # Second-chance: if the best match is close AND significantly better
+        # than the next best, it's likely correct
+        RELAXED_TOLERANCE = MATCH_TOLERANCE + 0.07
+        if best_dist <= RELAXED_TOLERANCE and len(results) >= 2:
+            second_dist = results[1][0]
+            gap = second_dist - best_dist
+            if gap > 0.05:  # clear separation from second best
+                return best_uid, round(1.0 - best_dist, 3)
+
     except Exception:
         pass
 
@@ -269,12 +372,29 @@ def _match_face(encoding: np.ndarray) -> Optional[tuple[str, float]]:
 # Async public API
 # ---------------------------------------------------------------------------
 
+def _serialize_encodings(encodings: list[np.ndarray]) -> bytes:
+    """Serialize face encodings to a binary blob for DB storage."""
+    import pickle
+    return pickle.dumps([e.tolist() for e in encodings])
+
+
+def _deserialize_encodings(blob: bytes) -> list[np.ndarray]:
+    """Deserialize face encodings from a DB blob."""
+    import pickle
+    return [np.array(e) for e in pickle.loads(blob)]
+
+
 async def register_face(user_id: str, image_bytes: bytes, user_name: str = "") -> bool:
     """
-    Register or update face encodings for a user from a single ID photo.
-    Generates multiple augmented encodings for robust matching.
-    Persists the image to disk and DB for reload across restarts.
-    Returns True if at least one face encoding was extracted, False otherwise.
+    Register face encodings for a user from an ID photo.
+
+    1. Computes augmented encodings from the photo
+    2. Saves ENCODINGS (not the image) to DB as a binary blob
+    3. Saves the photo to disk as backup for re-registration
+    4. Caches encodings in memory for fast matching
+
+    The photo is only used during this registration step.
+    At runtime, only the 128-d number arrays are used for matching.
     """
     encodings = await asyncio.to_thread(_register_with_augmentation, image_bytes)
     if not encodings:
@@ -283,9 +403,9 @@ async def register_face(user_id: str, image_bytes: bytes, user_name: str = "") -
     if user_name:
         _user_names[user_id] = user_name
 
-    # Persist image to disk + DB
     try:
         import os
+        # Save photo to disk (backup only — not used at runtime)
         faces_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "faces")
         os.makedirs(faces_dir, exist_ok=True)
         filename = f"{user_id}.jpg"
@@ -293,22 +413,24 @@ async def register_face(user_id: str, image_bytes: bytes, user_name: str = "") -
         with open(filepath, "wb") as f:
             f.write(image_bytes)
 
+        # Save encodings to DB (this is what gets loaded on restart)
         from services.database import get_db
         db = await get_db()
         face_id = f"face_{uuid.uuid4().hex[:8]}"
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         label = user_name or user_id
-        # Remove old enrollment
+        encodings_blob = _serialize_encodings(encodings)
+
         await db.execute("DELETE FROM enrolled_faces WHERE user_id = ?", (user_id,))
         await db.execute(
-            "INSERT INTO enrolled_faces VALUES (?,?,?,?,?,1)",
-            (face_id, user_id, f"faces/{filename}", label, now),
+            "INSERT INTO enrolled_faces VALUES (?,?,?,?,?,1,?)",
+            (face_id, user_id, f"faces/{filename}", label, now, encodings_blob),
         )
         await db.commit()
     except Exception as e:
         print(f"[face_service] DB persistence failed (non-fatal): {e}")
 
-    print(f"[face_service] Registered {len(encodings)} augmented encodings for {user_name or user_id}")
+    print(f"[face_service] Registered {len(encodings)} encodings for {user_name or user_id}")
     return True
 
 
@@ -388,15 +510,19 @@ async def remove_face(user_id: str) -> bool:
 
 
 async def load_enrolled_faces():
-    """Load all enrolled face images from DB and compute encodings.
-    Called on startup to restore face registry across restarts.
+    """Load pre-computed face encodings from DB.
+
+    Encodings are stored as binary blobs — no images are loaded or processed.
+    This makes startup instant regardless of how many faces are enrolled.
+    If a face was registered before encoding storage was added (no blob),
+    falls back to recomputing from the photo on disk.
     """
     import os
     try:
         from services.database import get_db
         db = await get_db()
         cursor = await db.execute("""
-            SELECT ef.user_id, ef.face_image_path, ef.label,
+            SELECT ef.user_id, ef.face_image_path, ef.label, ef.encodings_blob,
                    u.first_name || ' ' || u.last_name AS user_name
             FROM enrolled_faces ef
             JOIN users u ON ef.user_id = u.id
@@ -406,22 +532,51 @@ async def load_enrolled_faces():
 
         base_dir = os.path.dirname(os.path.dirname(__file__))
         loaded = 0
+        recomputed = 0
+
         for row in rows:
-            filepath = os.path.join(base_dir, row["face_image_path"])
-            if not os.path.exists(filepath):
-                continue
+            user_id = row["user_id"]
+            name = row["user_name"] or row["label"]
 
-            with open(filepath, "rb") as f:
-                image_bytes = f.read()
+            # Try loading pre-computed encodings from DB blob (fast path)
+            if row["encodings_blob"]:
+                try:
+                    encodings = _deserialize_encodings(row["encodings_blob"])
+                    if encodings:
+                        _face_registry[user_id] = encodings
+                        _user_names[user_id] = name
+                        loaded += 1
+                        continue
+                except Exception:
+                    pass
 
-            encodings = await asyncio.to_thread(_register_with_augmentation, image_bytes)
-            if encodings:
-                _face_registry[row["user_id"]] = encodings
-                _user_names[row["user_id"]] = row["user_name"] or row["label"]
-                loaded += 1
+            # Fallback: recompute from photo (slow path, only for legacy entries)
+            if row["face_image_path"]:
+                filepath = os.path.join(base_dir, row["face_image_path"])
+                if os.path.exists(filepath):
+                    with open(filepath, "rb") as f:
+                        image_bytes = f.read()
+                    encodings = await asyncio.to_thread(_register_with_augmentation, image_bytes)
+                    if encodings:
+                        _face_registry[user_id] = encodings
+                        _user_names[user_id] = name
+                        # Save encodings to DB so next restart is instant
+                        blob = _serialize_encodings(encodings)
+                        await db.execute(
+                            "UPDATE enrolled_faces SET encodings_blob = ? WHERE user_id = ?",
+                            (blob, user_id),
+                        )
+                        recomputed += 1
 
-        if loaded:
-            print(f"[face_service] Loaded {loaded} enrolled faces from DB")
+        if recomputed:
+            await db.commit()
+
+        total = loaded + recomputed
+        if total:
+            msg = f"[face_service] Loaded {loaded} faces from DB encodings"
+            if recomputed:
+                msg += f", recomputed {recomputed} from photos (now cached)"
+            print(msg)
     except Exception as e:
         print(f"[face_service] Failed to load enrolled faces: {e}")
 

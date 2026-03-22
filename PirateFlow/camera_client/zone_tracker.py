@@ -39,6 +39,7 @@ class TrackedPerson:
     bbox: tuple[int, int, int, int]  # x1, y1, x2, y2 in pixels
     centroid: tuple[float, float]     # normalized (x, y) 0-1
     confidence: float
+    bbox_area_norm: float = 0.0      # normalized bbox area (0-1 of frame)
 
 
 @dataclass
@@ -50,10 +51,12 @@ class PersonState:
     user_name: Optional[str] = None
     entered_zone_from: Optional[str] = None  # "outside" or "inside"
     last_centroid: tuple[float, float] = (0.0, 0.0)
+    smoothed_centroid: tuple[float, float] = (0.0, 0.0)  # EMA smoothed position
     last_seen: float = 0.0
-    frames_seen: int = 0           # total frames this track has been observed
-    frames_in_zone: int = 0        # consecutive frames inside the zone
-    zone_entry_time: float = 0.0   # when they entered the zone
+    frames_seen: int = 0
+    frames_in_zone: int = 0
+    zone_entry_time: float = 0.0
+    bbox_area: float = 0.0  # for filtering tiny detections
 
 
 @dataclass
@@ -84,9 +87,11 @@ class DoorwayZoneTracker:
         polygon: list[tuple[float, float]],
         room_direction: tuple[float, float],
         track_timeout: float = 8.0,
-        roster_stale_timeout: float = 300.0,  # 5 minutes
-        min_frames_to_emit: int = 3,          # track must exist this many frames before events fire
-        min_zone_time: float = 0.3,           # must be in zone at least this long (seconds)
+        roster_stale_timeout: float = 300.0,
+        min_frames_to_emit: int = 3,
+        min_zone_time: float = 0.3,
+        min_bbox_area: float = 0.005,         # ignore detections smaller than 0.5% of frame
+        smoothing_alpha: float = 0.4,         # EMA smoothing factor (0=max smooth, 1=no smooth)
     ):
         # Convert polygon to numpy array for cv2.pointPolygonTest
         # Store as pixel coords will be set per-frame
@@ -96,6 +101,8 @@ class DoorwayZoneTracker:
         self.roster_stale_timeout = roster_stale_timeout
         self.min_frames_to_emit = min_frames_to_emit
         self.min_zone_time = min_zone_time
+        self.min_bbox_area = min_bbox_area
+        self.smoothing_alpha = smoothing_alpha
 
         self._states: dict[int, PersonState] = {}
         self._roster: dict[int, RosterEntry] = {}
@@ -121,8 +128,19 @@ class DoorwayZoneTracker:
         seen_track_ids = set()
 
         for det in detections:
+            # Filter out tiny detections (people far in background)
+            if det.bbox_area_norm > 0 and det.bbox_area_norm < self.min_bbox_area:
+                continue
+
             seen_track_ids.add(det.track_id)
             cx, cy = det.centroid
+
+            # Apply EMA smoothing to centroid (reduces jitter)
+            if det.track_id in self._states:
+                prev = self._states[det.track_id].smoothed_centroid
+                a = self.smoothing_alpha
+                cx = a * cx + (1 - a) * prev[0]
+                cy = a * cy + (1 - a) * prev[1]
 
             # Point-in-polygon test
             test_point = (int(cx * scale), int(cy * scale))
@@ -130,6 +148,12 @@ class DoorwayZoneTracker:
 
             # Get or create state
             if det.track_id not in self._states:
+                # Check if this is a re-ID of someone already tracked
+                # (ByteTrack assigns new ID after brief occlusion)
+                merged = self._try_merge_track(det.track_id, (cx, cy), now)
+                if merged:
+                    continue
+
                 self._states[det.track_id] = PersonState(
                     track_id=det.track_id,
                     last_seen=now,
@@ -137,8 +161,10 @@ class DoorwayZoneTracker:
 
             state = self._states[det.track_id]
             state.last_centroid = det.centroid
+            state.smoothed_centroid = (cx, cy)
             state.last_seen = now
             state.frames_seen += 1
+            state.bbox_area = det.bbox_area_norm
 
             # Track zone time
             if in_polygon:
@@ -282,6 +308,63 @@ class DoorwayZoneTracker:
     def get_track_state(self, track_id: int) -> Optional[PersonState]:
         """Get the current state of a tracked person."""
         return self._states.get(track_id)
+
+    def _try_merge_track(self, new_track_id: int, centroid: tuple, now: float) -> bool:
+        """Check if a new track ID is actually a re-ID of an existing person.
+        If a recently-seen track is very close to this position, merge them.
+        Returns True if merged (caller should skip creating new state).
+        """
+        merge_distance = 0.08  # normalized distance threshold
+        merge_time = 3.0  # only merge with tracks seen within this many seconds
+
+        best_match = None
+        best_dist = float("inf")
+
+        for tid, state in self._states.items():
+            if tid == new_track_id:
+                continue
+            time_gap = now - state.last_seen
+            if time_gap > merge_time:
+                continue
+
+            dist = ((state.smoothed_centroid[0] - centroid[0]) ** 2 +
+                    (state.smoothed_centroid[1] - centroid[1]) ** 2) ** 0.5
+            if dist < merge_distance and dist < best_dist:
+                best_dist = dist
+                best_match = tid
+
+        if best_match is not None:
+            old_state = self._states[best_match]
+            # Create new state inheriting the old one's info
+            self._states[new_track_id] = PersonState(
+                track_id=new_track_id,
+                state=old_state.state,
+                user_id=old_state.user_id,
+                user_name=old_state.user_name,
+                entered_zone_from=old_state.entered_zone_from,
+                last_centroid=centroid,
+                smoothed_centroid=centroid,
+                last_seen=now,
+                frames_seen=old_state.frames_seen,
+                frames_in_zone=old_state.frames_in_zone,
+                zone_entry_time=old_state.zone_entry_time,
+                bbox_area=old_state.bbox_area,
+            )
+            # Update roster if person was inside
+            if best_match in self._roster:
+                old_entry = self._roster.pop(best_match)
+                self._roster[new_track_id] = RosterEntry(
+                    track_id=new_track_id,
+                    user_id=old_entry.user_id,
+                    user_name=old_entry.user_name,
+                    entered_at=old_entry.entered_at,
+                    last_seen=now,
+                )
+            # Transfer identity in the identifier cache
+            del self._states[best_match]
+            return True
+
+        return False
 
     def _which_side(self, point: tuple[float, float]) -> str:
         """Determine if a point is on the 'room' or 'corridor' side of the zone.

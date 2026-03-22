@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 
 from middleware.errors import install_error_handlers
 from middleware.logging_webhook import install_webhook_logging, send_discord, COLOR_GREEN, COLOR_RED
-from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access, users, cameras
+from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access, users, cameras, events
 
 load_dotenv()
 
@@ -37,6 +37,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Face loading skipped: {e}")
 
+    # Start scheduled campus events scraper (runs every 2 hours)
+    try:
+        from services.events_scraper import start_scheduled_scraper
+        await start_scheduled_scraper(interval_hours=2.0)
+    except Exception as e:
+        print(f"Events scraper skipped: {e}")
+
     # Notify Discord on startup
     await send_discord(
         title="🚀 PirateFlow Server Started",
@@ -59,6 +66,11 @@ async def lifespan(app: FastAPI):
             {"name": "Time", "value": f"`{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}`", "inline": True},
         ],
     )
+    try:
+        from services.events_scraper import stop_scheduled_scraper
+        await stop_scheduled_scraper()
+    except Exception:
+        pass
     await close_db()
     print("PirateFlow API shutting down...")
 
@@ -98,6 +110,7 @@ app.include_router(demo.router)
 app.include_router(face_access.router)
 app.include_router(users.router)
 app.include_router(cameras.router)
+app.include_router(events.router)
 
 
 # --- Health Check ---

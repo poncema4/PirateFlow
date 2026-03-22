@@ -47,9 +47,9 @@ def parse_args():
     p.add_argument("--show-feed", action="store_true")
     p.add_argument("--faces-dir", default=None)
     p.add_argument("--anthropic-key", default=None, help="Anthropic API key for doorway detection")
-    p.add_argument("--send-frames", action="store_true", help="Send annotated frames to server")
-    p.add_argument("--yolo-size", default="n", choices=["n", "s", "m"],
-                   help="YOLO model size: n=nano(fast), s=small, m=medium(accurate)")
+    # --send-frames removed for security: no frames are ever saved or transmitted
+    p.add_argument("--yolo-size", default="s", choices=["n", "s", "m"],
+                   help="YOLO model size: n=nano(fast), s=small(default,balanced), m=medium(accurate)")
     return p.parse_args()
 
 
@@ -82,7 +82,8 @@ def flush_and_read(cap, is_rtsp):
 # ---------------------------------------------------------------------------
 
 def send_event(api_url, camera_key, camera_id, room_id,
-               user_id, user_name, direction, confidence, frame_b64=None):
+               user_id, user_name, direction, confidence):
+    """Send crossing event metadata to server. No frames — only metadata."""
     if not requests:
         return None
     payload = {
@@ -90,8 +91,6 @@ def send_event(api_url, camera_key, camera_id, room_id,
         "user_id": user_id, "user_name": user_name,
         "direction": direction, "confidence": confidence,
     }
-    if frame_b64:
-        payload["frame_jpeg_b64"] = frame_b64
     try:
         r = requests.post(
             f"{api_url}/api/cameras/events",
@@ -115,12 +114,9 @@ def draw_overlay(frame, doorway_polygon, room_direction, zone_tracker,
     display = frame.copy()
     h, w = frame.shape[:2]
 
-    # Draw doorway polygon zone (semi-transparent fill)
+    # Draw doorway polygon zone (stable outline, no flashing fill)
     if doorway_polygon:
         pts = np.array([[int(p[0] * w), int(p[1] * h)] for p in doorway_polygon], np.int32)
-        overlay = display.copy()
-        cv2.fillPoly(overlay, [pts], (0, 255, 255, 40))
-        cv2.addWeighted(overlay, 0.15, display, 0.85, 0, display)
         cv2.polylines(display, [pts], True, (0, 255, 255), 2)
 
         # Draw "DOORWAY" label
@@ -220,21 +216,11 @@ def main():
     model = YOLO(f"yolov8{args.yolo_size}.pt")
     print(f"  Model loaded: yolov8{args.yolo_size}.pt")
 
-    # --- Load face registry ---
-    identifier = PersonIdentifier()
-    faces_dir = args.faces_dir
-    if not faces_dir:
-        # Default location
-        default = os.path.join(os.path.dirname(__file__), "..", "backend", "faces")
-        if os.path.isdir(default):
-            faces_dir = default
-
-    if faces_dir:
-        print(f"Loading faces from {faces_dir}...")
-        count = identifier.load_faces_from_dir(faces_dir)
-        print(f"  {count} faces loaded")
-    else:
-        print("  No faces directory — identification disabled")
+    # --- Face identification via server API ---
+    # --- Face identification via server API ---
+    identifier = PersonIdentifier(api_url=args.api_url, camera_key=args.camera_key)
+    print(f"  Face ID via: {args.api_url}/api/face/verify")
+    print("  SECURITY: No frames are saved to disk — processed in RAM only")
 
     # --- Open video ---
     cap = open_source(args.source)
@@ -264,6 +250,9 @@ def main():
     zone_tracker = DoorwayZoneTracker(
         polygon=doorway.polygon,
         room_direction=doorway.room_direction,
+        min_frames_to_emit=5,    # track must exist 5+ frames before events
+        min_zone_time=0.5,       # must be in zone 0.5+ seconds
+        track_timeout=10.0,      # keep tracks alive longer
     )
 
     # --- Main loop ---
@@ -294,9 +283,8 @@ def main():
 
             now = time.time()
             if now - last_process < frame_interval:
-                # Still show feed between processing
+                # Between processing frames, show last annotated frame
                 if args.show_feed:
-                    cv2.imshow("PirateFlow", frame)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
                 continue
@@ -307,7 +295,7 @@ def main():
 
             # --- YOLO detect + track ---
             results = model.track(frame, persist=True, classes=[0],
-                                  verbose=False, conf=0.4)
+                                  verbose=False, conf=0.5, iou=0.5)
 
             detections = []
             if results and results[0].boxes is not None and results[0].boxes.id is not None:
@@ -320,24 +308,27 @@ def main():
                     # Centroid at bottom-center of bbox (feet position)
                     cx = ((x1 + x2) / 2.0) / w
                     cy = y2 / h  # bottom of bbox
+                    bbox_area = ((x2 - x1) * (y2 - y1)) / (w * h)
 
                     detections.append(TrackedPerson(
                         track_id=track_id,
                         bbox=(x1, y1, x2, y2),
                         centroid=(cx, cy),
                         confidence=conf,
+                        bbox_area_norm=bbox_area,
                     ))
 
             # --- Zone tracker update ---
             events = zone_tracker.update(detections)
 
-            # --- Face identification (every 5th frame, unidentified tracks) ---
-            if frame_count % 5 == 0:
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # --- Face identification (every 3rd frame via server API) ---
+            if frame_count % 3 == 0:
                 for det in detections:
                     if identifier.get_identity(det.track_id):
                         continue
-                    result = identifier.try_identify(rgb, det.track_id, det.bbox)
+                    result = identifier.try_identify(
+                        frame, det.track_id, det.bbox, room_id=args.room_id
+                    )
                     if result:
                         uid, name, conf = result
                         zone_tracker.assign_identity(det.track_id, uid, name)
@@ -354,16 +345,10 @@ def main():
                 if len(event_log) > 20:
                     event_log.pop(0)
 
-                # Send to server
-                frame_b64 = None
-                if args.send_frames:
-                    _, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                    frame_b64 = base64.b64encode(buf).decode()
-
+                # Send metadata only to server — no frames
                 result = send_event(
                     args.api_url, args.camera_key, args.camera_id, args.room_id,
                     evt.user_id, evt.user_name, evt.direction, evt.confidence,
-                    frame_b64,
                 )
                 if result:
                     auth = "OK" if result.get("authorized") else "UNAUTHORIZED"
