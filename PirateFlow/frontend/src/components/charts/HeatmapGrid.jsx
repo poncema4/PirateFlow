@@ -3,11 +3,11 @@ const hours = Array.from({ length: 12 }, (_, i) => `${i + 8}:00`);
 
 function HeatmapCell({ value }) {
   const opacity = value / 100;
-  const bg = `rgba(0, 200, 150, ${0.08 + opacity * 0.92})`;
+  const bg = `rgba(0, 75, 141, ${0.08 + opacity * 0.92})`;
   return (
     <div
       className="rounded flex items-center justify-center cursor-pointer transition-all"
-      style={{ background: bg, color: value > 55 ? "#000" : "var(--text-muted)", fontSize: 9, height: 26 }}
+      style={{ background: bg, color: value > 55 ? "#fff" : "var(--text-muted)", fontSize: 9, height: 26 }}
       title={`${value}% utilization`}
     >
       {value}%
@@ -43,7 +43,7 @@ export default function HeatmapGrid({ data = [] }) {
 
       <div className="flex items-center gap-2 mt-3">
         <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Low</span>
-        <div style={{ height: 6, flex: 1, borderRadius: 3, background: "linear-gradient(90deg, rgba(0,200,150,0.08), rgba(0,200,150,1))" }} />
+        <div style={{ height: 6, flex: 1, borderRadius: 3, background: "linear-gradient(90deg, rgba(0,75,141,0.08), rgba(0,75,141,1))" }} />
         <span style={{ fontSize: 10, color: "var(--text-muted)" }}>High</span>
       </div>
     </div>

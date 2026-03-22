@@ -15,9 +15,9 @@ function RoomCard({ room, isSelected, onClick }) {
         background: isSelected ? "var(--bg-primary)" : "var(--bg-card)",
         border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
         transition: "border-color 150ms, transform 150ms, box-shadow 150ms",
-        boxShadow: isSelected ? "0 0 12px rgba(0,200,150,0.1)" : "none",
+        boxShadow: isSelected ? "0 0 12px rgba(0,75,141,0.1)" : "none",
       }}
-      onMouseEnter={(e) => { if (!isSelected) { e.currentTarget.style.borderColor = "rgba(0,200,150,0.3)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
+      onMouseEnter={(e) => { if (!isSelected) { e.currentTarget.style.borderColor = "rgba(0,75,141,0.3)"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
       onMouseLeave={(e) => { if (!isSelected) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "translateY(0)"; } }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -58,7 +58,7 @@ function FloorSection({ floorName, rooms, expandedRoomId, onRoomClick, onClosePa
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{floorName}</span>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--border)", color: "var(--text-muted)", fontSize: 11 }}>{rooms.length} room{rooms.length !== 1 ? "s" : ""}</span>
           {availableCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(0,200,150,0.1)", color: "var(--success)", border: "1px solid rgba(0,200,150,0.2)", fontSize: 11 }}>{availableCount} available</span>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(0,75,141,0.1)", color: "var(--success)", border: "1px solid rgba(0,75,141,0.2)", fontSize: 11 }}>{availableCount} available</span>
           )}
         </div>
         <span style={{ color: "var(--text-muted)", fontSize: 11, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms" }}>\u25BE</span>
@@ -191,7 +191,7 @@ export default function BuildingDetail() {
       <div className="p-4 flex flex-col gap-3 items-center" style={{ maxWidth: 1000, margin: "0 auto", paddingTop: 64 }}>
         <p style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 600 }}>{error}</p>
         <div className="flex gap-2">
-          <button onClick={fetchData} style={{ background: "var(--accent)", color: "#000", border: "none", borderRadius: 8, padding: "7px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Retry</button>
+          <button onClick={fetchData} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "7px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Retry</button>
           <button onClick={() => navigate("/")} style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 18px", fontSize: 12, cursor: "pointer" }}>Back</button>
         </div>
       </div>
@@ -242,12 +242,12 @@ export default function BuildingDetail() {
             style={{
               background: activeFilterCount > 0 ? "var(--accent-muted)" : "var(--bg-card)",
               color: activeFilterCount > 0 ? "var(--accent)" : "var(--text-muted)",
-              border: `1px solid ${activeFilterCount > 0 ? "rgba(0,200,150,0.3)" : "var(--border)"}`,
+              border: `1px solid ${activeFilterCount > 0 ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
               borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 150ms",
             }}>
             Filters
             {activeFilterCount > 0 && (
-              <span style={{ background: "var(--accent)", color: "#000", borderRadius: "50%", width: 15, height: 15, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 15, height: 15, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {activeFilterCount}
               </span>
             )}
@@ -255,9 +255,9 @@ export default function BuildingDetail() {
 
           <button onClick={() => setAvailableOnly((v) => !v)}
             style={{
-              background: availableOnly ? "rgba(0,200,150,0.1)" : "var(--bg-card)",
+              background: availableOnly ? "rgba(0,75,141,0.1)" : "var(--bg-card)",
               color: availableOnly ? "var(--success)" : "var(--text-muted)",
-              border: `1px solid ${availableOnly ? "rgba(0,200,150,0.3)" : "var(--border)"}`,
+              border: `1px solid ${availableOnly ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
               borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", transition: "all 150ms",
             }}>
             Available now
@@ -270,7 +270,7 @@ export default function BuildingDetail() {
                 style={{
                   background: sortBy === opt.value ? "var(--accent-muted)" : "transparent",
                   color: sortBy === opt.value ? "var(--accent)" : "var(--text-muted)",
-                  border: `1px solid ${sortBy === opt.value ? "rgba(0,200,150,0.3)" : "var(--border)"}`,
+                  border: `1px solid ${sortBy === opt.value ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
                   borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", transition: "all 150ms",
                 }}>
                 {opt.label}
@@ -289,7 +289,7 @@ export default function BuildingDetail() {
                     style={{
                       background: selectedTypes.includes(value) ? "var(--accent-muted)" : "var(--bg-primary)",
                       color: selectedTypes.includes(value) ? "var(--accent)" : "var(--text-muted)",
-                      border: `1px solid ${selectedTypes.includes(value) ? "rgba(0,200,150,0.3)" : "var(--border)"}`,
+                      border: `1px solid ${selectedTypes.includes(value) ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
                       borderRadius: 20, padding: "3px 10px", fontSize: 11, cursor: "pointer", transition: "all 150ms",
                     }}>
                     {label}
@@ -326,7 +326,7 @@ export default function BuildingDetail() {
           <div className="rounded-xl p-6 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10 }}>No rooms match the current filters.</p>
             <button onClick={() => { setSelectedTypes([]); setMinCapacity(""); setAvailableOnly(false); }}
-              style={{ background: "var(--accent)", color: "#000", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               Clear filters
             </button>
           </div>

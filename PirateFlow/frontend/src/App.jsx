@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { WebSocketProvider } from "./context/WebSocketContext";
+import TopBar from "./components/common/TopBar";
 import Sidebar from "./components/common/Sidebar";
 import Header from "./components/common/Header";
 import Landing from "./pages/public/Landing";
@@ -36,8 +37,20 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// ─── Layout ──────────────────────────────────────────────────────────────────
-function Layout({ children, alertCount }) {
+// ─── Public Layout (TopBar only) ─────────────────────────────────────────────
+function PublicLayout({ children }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
+      <TopBar />
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 32px" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin Layout (Sidebar + Header) ─────────────────────────────────────────
+function AdminLayout({ children, alertCount }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", overflow: "hidden" }}>
       <Sidebar alertCount={alertCount} />
@@ -61,25 +74,25 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/spaces/:buildingId" element={<Layout><BuildingDetail /></Layout>} />
+            <Route path="/spaces/:buildingId" element={<PublicLayout><BuildingDetail /></PublicLayout>} />
             <Route path="/spaces" element={<Navigate to="/" replace />} />
 
-            {/* Protected */}
+            {/* Protected (uses public layout) */}
             <Route path="/bookings/new" element={
-              <ProtectedRoute><Layout><CreateBooking /></Layout></ProtectedRoute>
+              <ProtectedRoute><PublicLayout><CreateBooking /></PublicLayout></ProtectedRoute>
             } />
             <Route path="/bookings" element={
-              <ProtectedRoute><Layout><MyBookings /></Layout></ProtectedRoute>
+              <ProtectedRoute><PublicLayout><MyBookings /></PublicLayout></ProtectedRoute>
             } />
 
             {/* Admin */}
-            <Route path="/dashboard" element={<AdminRoute><Layout><Dashboard /></Layout></AdminRoute>} />
-            <Route path="/analytics" element={<AdminRoute><Layout><Analytics /></Layout></AdminRoute>} />
-            <Route path="/revenue" element={<AdminRoute><Layout><Revenue /></Layout></AdminRoute>} />
-            <Route path="/alerts" element={<AdminRoute><Layout><Alerts /></Layout></AdminRoute>} />
-            <Route path="/admin/spaces" element={<AdminRoute><Layout><ManageSpaces /></Layout></AdminRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><Layout><ManageUsers /></Layout></AdminRoute>} />
-            <Route path="/admin/cameras" element={<AdminRoute><Layout><Cameras /></Layout></AdminRoute>} />
+            <Route path="/dashboard" element={<AdminRoute><AdminLayout><Dashboard /></AdminLayout></AdminRoute>} />
+            <Route path="/analytics" element={<AdminRoute><AdminLayout><Analytics /></AdminLayout></AdminRoute>} />
+            <Route path="/revenue" element={<AdminRoute><AdminLayout><Revenue /></AdminLayout></AdminRoute>} />
+            <Route path="/alerts" element={<AdminRoute><AdminLayout><Alerts /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/spaces" element={<AdminRoute><AdminLayout><ManageSpaces /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AdminLayout><ManageUsers /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/cameras" element={<AdminRoute><AdminLayout><Cameras /></AdminLayout></AdminRoute>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

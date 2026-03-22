@@ -161,7 +161,7 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
                 style={{
                   background: selectedDate === value ? "var(--accent-muted)" : "var(--bg-card)",
                   color: selectedDate === value ? "var(--accent)" : "var(--text-muted)",
-                  border: `1px solid ${selectedDate === value ? "rgba(0,200,150,0.3)" : "var(--border)"}`,
+                  border: `1px solid ${selectedDate === value ? "rgba(0,75,141,0.3)" : "var(--border)"}`,
                   borderRadius: 6, padding: "3px 8px", fontSize: 10, cursor: "pointer", transition: "all 150ms",
                 }}
               >

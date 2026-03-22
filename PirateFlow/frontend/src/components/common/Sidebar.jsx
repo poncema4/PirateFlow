@@ -114,7 +114,7 @@ export default function Sidebar({ alertCount = 0 }) {
           <div className="flex items-center gap-2 mb-2 px-1">
             <div
               className="rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ width: 28, height: 28, background: "var(--accent)", color: "#000", flexShrink: 0 }}
+              style={{ width: 28, height: 28, background: "var(--accent)", color: "#fff", flexShrink: 0 }}
             >
               {user?.name?.[0] || "?"}
             </div>

@@ -42,7 +42,7 @@ const BOOKING_TYPE_LABELS = {
 };
 
 const STATUS_STYLES = {
-  confirmed:  { label: "Confirmed",  bg: "rgba(0,200,150,0.1)",    border: "rgba(0,200,150,0.3)",  color: "var(--accent)"     },
+  confirmed:  { label: "Confirmed",  bg: "rgba(0,75,141,0.1)",    border: "rgba(0,75,141,0.3)",  color: "var(--accent)"     },
   completed:  { label: "Completed",  bg: "rgba(90,96,112,0.15)",   border: "rgba(90,96,112,0.3)",  color: "var(--text-muted)" },
   cancelled:  { label: "Cancelled",  bg: "rgba(232,68,90,0.1)",    border: "rgba(232,68,90,0.3)",  color: "var(--danger)"     },
   no_show:    { label: "No-show",    bg: "rgba(245,166,35,0.1)",   border: "rgba(245,166,35,0.3)", color: "var(--warning)"    },
@@ -102,7 +102,7 @@ function BookingCard({ booking, onCancel, cancelling }) {
         padding: "14px 16px",
         transition: "border-color 150ms",
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(0,200,150,0.25)"; }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(0,75,141,0.25)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
     >
       {/* Top row: title + status badge */}
@@ -257,7 +257,7 @@ function EmptyState({ tab }) {
             marginTop: 6,
             display: "inline-block",
             background: "var(--accent)",
-            color: "#000",
+            color: "#fff",
             fontWeight: 600,
             fontSize: 12,
             padding: "8px 18px",
@@ -510,7 +510,7 @@ export default function MyBookings() {
           to="/"
           style={{
             background: "var(--accent)",
-            color: "#000",
+            color: "#fff",
             fontWeight: 600,
             fontSize: 12,
             padding: "8px 16px",
@@ -550,7 +550,7 @@ export default function MyBookings() {
             onClick={fetchBookings}
             style={{
               background: "var(--accent)",
-              color: "#000",
+              color: "#fff",
               border: "none",
               borderRadius: 7,
               padding: "8px 20px",

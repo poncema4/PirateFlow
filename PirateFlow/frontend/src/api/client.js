@@ -17,7 +17,6 @@ export const tokenStorage = {
  
 // ─── Axios Instance ─────────────────────────────────────────────────────────
 const apiClient = axios.create({
-   
   baseURL: import.meta.env.PROD ? "https://api.pirateflow.net/api" : "/api",
   headers: { "Content-Type": "application/json" },
 });
@@ -40,7 +39,13 @@ apiClient.interceptors.response.use(
  
     if (error.response?.status === 401 && !original._retried) {
       original._retried = true;
- 
+
+      // Only attempt refresh/redirect if the user had tokens (was logged in)
+      const refreshToken = tokenStorage.getRefresh();
+      if (!refreshToken) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           refreshQueue.push({ resolve, reject });
@@ -53,7 +58,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
       try {
         const { data } = await axios.post("/api/auth/refresh", {
-          refresh_token: tokenStorage.getRefresh(),
+          refresh_token: refreshToken,
         });
         tokenStorage.set(data.access_token, null);
         refreshQueue.forEach(({ resolve }) => resolve(data.access_token));

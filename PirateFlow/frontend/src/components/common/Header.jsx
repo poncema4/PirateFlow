@@ -88,7 +88,7 @@ export default function Header({ alertCount = 0 }) {
         <div className="relative group">
           <div
             className="rounded-full flex items-center justify-center font-bold cursor-pointer"
-            style={{ width: 32, height: 32, background: "var(--accent)", color: "#000", fontSize: 13 }}
+            style={{ width: 32, height: 32, background: "var(--accent)", color: "#fff", fontSize: 13 }}
           >
             {user?.name?.[0] || "?"}
           </div>

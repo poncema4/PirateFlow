@@ -1,27 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:wght@300;400;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --font-display: 'Space Mono', monospace;
-  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
 
-  --bg-primary: #0d0f12;
-  --bg-card: #13161b;
-  --bg-elevated: #181b22;
-  --sidebar-bg: #0a0c0f;
+  --bg-primary: #f8f4ec;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --sidebar-bg: #ffffff;
 
-  --border: #1e2229;
-  --border-hover: #2a2e38;
+  --border: #ddd5c4;
+  --border-hover: #c0b09a;
 
-  --text-primary: #e8eaf0;
-  --text-muted: #5a6070;
+  --text-primary: #1b2f4e;
+  --text-muted: #7a6a52;
 
-  --accent: #00c896;
-  --accent-muted: #00c89618;
+  --accent: #004B8D;
+  --accent-muted: #004B8D12;
 
-  --success: #00c896;
-  --warning: #f5a623;
-  --danger: #e8445a;
+  --success: #2d6a4a;
+  --warning: #c08030;
+  --danger: #8b2a2a;
+
+  --shu-blue: #004B8D;
+  --shu-blue-dk: #00345E;
+  --shu-blue-lt: #2B6FAF;
+
+  --cream-dk: #ede8dc;
+
+  --shadow: 0 2px 16px rgba(0,75,141,.08);
+  --shadow-hover: 0 8px 32px rgba(0,75,141,.14);
+  --radius: 8px;
+  --radius-lg: 14px;
+  --transition: .22s cubic-bezier(.4,0,.2,1);
 }
 
 * {
@@ -38,17 +51,23 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-/* ─── Shared Keyframe Animations ──────────────────────────────────────────── */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 @keyframes shimmer {
   0% { background-position: 200% 0; }

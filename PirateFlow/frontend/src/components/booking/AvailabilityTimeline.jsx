@@ -55,7 +55,7 @@ export default function AvailabilityTimeline({
       {/* Legend */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(0,200,150,0.2)", border: "1px solid rgba(0,200,150,0.4)" }} />
+          <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(0,75,141,0.2)", border: "1px solid rgba(0,75,141,0.4)" }} />
           <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Available</span>
         </div>
         <div className="flex items-center gap-1">
@@ -64,7 +64,7 @@ export default function AvailabilityTimeline({
         </div>
         {highlightRange && (
           <div className="flex items-center gap-1">
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(0,200,150,0.55)", border: "1px solid var(--accent)" }} />
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(0,75,141,0.55)", border: "1px solid var(--accent)" }} />
             <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Selected</span>
           </div>
         )}
@@ -93,10 +93,10 @@ export default function AvailabilityTimeline({
             const isAvail = slot.status === "available";
 
             const baseBg = highlighted
-              ? "rgba(0,200,150,0.55)"
+              ? "rgba(0,75,141,0.55)"
               : booked
               ? "rgba(232,68,90,0.25)"
-              : "rgba(0,200,150,0.07)";
+              : "rgba(0,75,141,0.07)";
 
             return (
               <div
@@ -115,7 +115,7 @@ export default function AvailabilityTimeline({
                   transition: "background 100ms",
                 }}
                 onMouseEnter={(e) => {
-                  if (isAvail && !highlighted) e.currentTarget.style.background = "rgba(0,200,150,0.22)";
+                  if (isAvail && !highlighted) e.currentTarget.style.background = "rgba(0,75,141,0.22)";
                 }}
                 onMouseLeave={(e) => {
                   if (isAvail && !highlighted) e.currentTarget.style.background = baseBg;

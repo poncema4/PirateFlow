@@ -55,7 +55,7 @@ function Section({ number, title, children }) {
       <div className="flex items-center gap-2.5">
         <span
           className="flex items-center justify-center rounded-full text-sm font-bold flex-shrink-0"
-          style={{ width: 26, height: 26, background: "var(--accent)", color: "#000" }}
+          style={{ width: 26, height: 26, background: "var(--accent)", color: "#fff" }}
         >
           {number}
         </span>
@@ -104,7 +104,7 @@ function BookingSuccess({ booking, onBookAnother }) {
           width: 64,
           height: 64,
           borderRadius: "50%",
-          background: "rgba(0,200,150,0.15)",
+          background: "rgba(0,75,141,0.15)",
           border: "2px solid var(--accent)",
           display: "flex",
           alignItems: "center",
@@ -134,7 +134,7 @@ function BookingSuccess({ booking, onBookAnother }) {
 
       <div
         className="w-full rounded-xl flex flex-col gap-2.5 text-left"
-        style={{ background: "var(--bg-card)", border: "1px solid rgba(0,200,150,0.25)", padding: "16px 18px" }}
+        style={{ background: "var(--bg-card)", border: "1px solid rgba(0,75,141,0.25)", padding: "16px 18px" }}
       >
         <Row label="Room"     value={booking.room_name} />
         <Row label="Building" value={booking.building_name} />
@@ -159,7 +159,7 @@ function BookingSuccess({ booking, onBookAnother }) {
           style={{
             flex: 1,
             background: "var(--accent)",
-            color: "#000",
+            color: "#fff",
             border: "none",
             borderRadius: 7,
             padding: "10px 0",
