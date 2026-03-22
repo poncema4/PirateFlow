@@ -309,9 +309,6 @@ export default function CreateBooking() {
               <p className="booking-room-meta">
                 {roomInfo.building_name} · {roomInfo.floor_name} · {ROOM_TYPE_LABELS[roomInfo.room_type] || roomInfo.room_type} · {roomInfo.capacity} people
               </p>
-              {roomInfo.hourly_rate && (
-                <p className="booking-room-meta">${roomInfo.hourly_rate}/hr</p>
-              )}
             </div>
             <button
               className="btn btn-secondary btn-sm"

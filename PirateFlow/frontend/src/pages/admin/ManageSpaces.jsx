@@ -190,18 +190,6 @@ function RoomForm({ floorId, initial, onSave, onCancel, saving }) {
             onChange={(e) => set("capacity", Number(e.target.value))}
           />
         </label>
-        <label className="admin-field-label">
-          Hourly Rate ($)
-          <input
-            className="admin-input"
-            placeholder="0"
-            type="number"
-            min={0}
-            step={0.5}
-            value={f.hourly_rate}
-            onChange={(e) => set("hourly_rate", Number(e.target.value))}
-          />
-        </label>
       </div>
       <div className="admin-form-row">
         <input
@@ -607,7 +595,7 @@ export default function ManageSpaces() {
                                   <span className="admin-card-title">{room.name}</span>
                                   <span className="badge-muted" style={{ marginLeft: 8, marginRight: 8 }}>{label(room.room_type || "unknown")}</span>
                                   <span className="admin-card-meta">
-                                    Cap: {room.capacity} · ${room.hourly_rate ?? 0}/hr
+                                    Capacity: {room.capacity}
                                   </span>
                                 </div>
                                 <div className="admin-page-controls">

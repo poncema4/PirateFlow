@@ -109,9 +109,6 @@ export default function RoomExpandedPanel({ roomId, onClose, onBook }) {
         <span className="room-panel-tag">
           {room.capacity} people
         </span>
-        <span className="room-panel-tag">
-          {room.hourly_rate ? `$${room.hourly_rate}/hr` : "Free"}
-        </span>
         {room.equipment?.length > 0 && (
           room.equipment.map((eq) => (
             <span key={eq} className="room-panel-equip-tag">

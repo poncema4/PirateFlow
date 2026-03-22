@@ -21,7 +21,6 @@ function RoomCard({ room, isSelected, onClick }) {
       <div className="floor-room-info">
         <span className="floor-room-tag">{ROOM_TYPE_LABELS[room.room_type] || room.room_type}</span>
         <span className="floor-room-tag">&#x25EB; {room.capacity}</span>
-        {room.hourly_rate && <span className="floor-room-tag">${room.hourly_rate}/hr</span>}
       </div>
       {room.equipment?.length > 0 && (
         <div className="floor-room-equip">
