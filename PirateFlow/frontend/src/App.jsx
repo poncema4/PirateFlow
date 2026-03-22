@@ -65,6 +65,13 @@ function AdminLayout({ children, alertCount }) {
   );
 }
 
+// ─── Adaptive Layout: admin stays in sidebar, students get TopBar ────────────
+function BookingLayout({ children }) {
+  const { user } = useAuth();
+  if (user?.role === "admin") return <AdminLayout>{children}</AdminLayout>;
+  return <PublicLayout>{children}</PublicLayout>;
+}
+
 // ─── Home: admin → dashboard, everyone else → landing ───────────────────────
 function Home() {
   const { user } = useAuth();
@@ -82,16 +89,16 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
-            <Route path="/spaces/:buildingId" element={<PublicLayout><BuildingDetail /></PublicLayout>} />
-            <Route path="/spaces" element={<Navigate to="/" replace />} />
+            <Route path="/events" element={<BookingLayout><Events /></BookingLayout>} />
+            <Route path="/spaces/:buildingId" element={<BookingLayout><BuildingDetail /></BookingLayout>} />
+            <Route path="/spaces" element={<BookingLayout><Landing /></BookingLayout>} />
 
-            {/* Protected (uses public layout) */}
+            {/* Protected (uses public layout for students) */}
             <Route path="/bookings/new" element={
-              <ProtectedRoute><PublicLayout><CreateBooking /></PublicLayout></ProtectedRoute>
+              <ProtectedRoute><BookingLayout><CreateBooking /></BookingLayout></ProtectedRoute>
             } />
             <Route path="/bookings" element={
-              <ProtectedRoute><PublicLayout><MyBookings /></PublicLayout></ProtectedRoute>
+              <ProtectedRoute><BookingLayout><MyBookings /></BookingLayout></ProtectedRoute>
             } />
 
             {/* Admin */}

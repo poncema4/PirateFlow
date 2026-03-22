@@ -4,8 +4,9 @@ import { useAuth } from "../../hooks/useAuth";
 
 const adminNavItems = [
   { path: "/dashboard",      label: "Dashboard",      icon: "dashboard" },
-  { path: "/",               label: "Spaces",          icon: "spaces" },
+  { path: "/spaces",         label: "Spaces",          icon: "spaces" },
   { path: "/bookings",       label: "Bookings",        icon: "bookings" },
+  { path: "/events",         label: "Events",          icon: "bookings" },
   { path: "/analytics",      label: "Analytics",       icon: "analytics" },
   { path: "/revenue",        label: "Revenue",         icon: "revenue" },
   { path: "/alerts",         label: "Alerts",          icon: "alerts" },
