@@ -51,6 +51,9 @@ class PersonState:
     entered_zone_from: Optional[str] = None  # "outside" or "inside"
     last_centroid: tuple[float, float] = (0.0, 0.0)
     last_seen: float = 0.0
+    frames_seen: int = 0           # total frames this track has been observed
+    frames_in_zone: int = 0        # consecutive frames inside the zone
+    zone_entry_time: float = 0.0   # when they entered the zone
 
 
 @dataclass
@@ -82,6 +85,8 @@ class DoorwayZoneTracker:
         room_direction: tuple[float, float],
         track_timeout: float = 8.0,
         roster_stale_timeout: float = 300.0,  # 5 minutes
+        min_frames_to_emit: int = 3,          # track must exist this many frames before events fire
+        min_zone_time: float = 0.3,           # must be in zone at least this long (seconds)
     ):
         # Convert polygon to numpy array for cv2.pointPolygonTest
         # Store as pixel coords will be set per-frame
@@ -89,6 +94,8 @@ class DoorwayZoneTracker:
         self.room_direction = np.array(room_direction, dtype=np.float32)
         self.track_timeout = track_timeout
         self.roster_stale_timeout = roster_stale_timeout
+        self.min_frames_to_emit = min_frames_to_emit
+        self.min_zone_time = min_zone_time
 
         self._states: dict[int, PersonState] = {}
         self._roster: dict[int, RosterEntry] = {}
@@ -131,6 +138,15 @@ class DoorwayZoneTracker:
             state = self._states[det.track_id]
             state.last_centroid = det.centroid
             state.last_seen = now
+            state.frames_seen += 1
+
+            # Track zone time
+            if in_polygon:
+                state.frames_in_zone += 1
+                if state.frames_in_zone == 1:
+                    state.zone_entry_time = now
+            else:
+                state.frames_in_zone = 0
 
             # Resolve UNKNOWN state
             if state.state == TrackZoneState.UNKNOWN:
@@ -167,6 +183,18 @@ class DoorwayZoneTracker:
                 if not in_polygon:
                     # Exited the zone — determine which side
                     exit_side = self._which_side(det.centroid)
+
+                    # Robustness: require minimum frames and time in zone
+                    time_in_zone = now - state.zone_entry_time
+                    is_reliable = (state.frames_seen >= self.min_frames_to_emit
+                                   and time_in_zone >= self.min_zone_time)
+
+                    if not is_reliable:
+                        # Not enough evidence — just update state without emitting event
+                        state.state = (TrackZoneState.INSIDE
+                                       if exit_side == "room"
+                                       else TrackZoneState.OUTSIDE)
+                        continue
 
                     if state.entered_zone_from == "outside" and exit_side == "room":
                         # Came from outside, exited to room → ENTRY

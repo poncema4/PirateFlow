@@ -41,13 +41,30 @@ class PersonIdentifier:
 
             try:
                 img = face_recognition.load_image_file(path)
-                encodings = face_recognition.face_encodings(img, num_jitters=2)
-                if encodings:
+                from PIL import Image, ImageEnhance, ImageOps
+                pil_img = Image.fromarray(img)
+
+                # Generate augmented versions for robust matching
+                augmented = [pil_img]
+                augmented.append(ImageOps.mirror(pil_img))
+                augmented.append(ImageEnhance.Brightness(pil_img).enhance(1.25))
+                augmented.append(ImageEnhance.Brightness(pil_img).enhance(0.75))
+                augmented.append(ImageEnhance.Contrast(pil_img).enhance(1.3))
+
+                all_encodings = []
+                for aug in augmented:
+                    aug_arr = np.array(aug)
+                    encs = face_recognition.face_encodings(aug_arr, num_jitters=2)
+                    all_encodings.extend(encs)
+
+                if all_encodings:
                     uid = os.path.splitext(fname)[0].lower()
-                    self._registry[uid] = encodings
+                    self._registry[uid] = all_encodings
                     self._names[uid] = name
                     count += 1
-                    print(f"  Loaded: {name} ({len(encodings)} encodings)")
+                    print(f"  Loaded: {name} ({len(all_encodings)} encodings)")
+                else:
+                    print(f"  WARNING: No face found in {fname}")
             except Exception as e:
                 print(f"  Failed to load {fname}: {e}")
 
@@ -80,25 +97,31 @@ class PersonIdentifier:
         x1, y1, x2, y2 = bbox
         h, w = frame.shape[:2]
 
-        # Clamp and add slight padding
-        pad = 10
-        x1 = max(0, x1 - pad)
-        y1 = max(0, y1 - pad)
-        x2 = min(w, x2 + pad)
-        y2 = min(h, y2 + pad)
+        # Focus on upper body / head area for better face detection
+        body_h = y2 - y1
+        head_y2 = min(h, y1 + int(body_h * 0.55))  # upper 55% of body
 
-        crop = frame[y1:y2, x1:x2]
-        if crop.size == 0:
+        # Wide padding for better face capture
+        pad_x = max(30, int((x2 - x1) * 0.3))
+        pad_y = 20
+        cx1 = max(0, x1 - pad_x)
+        cy1 = max(0, y1 - pad_y)
+        cx2 = min(w, x2 + pad_x)
+        cy2 = min(h, head_y2 + pad_y)
+
+        crop = frame[cy1:cy2, cx1:cx2]
+        if crop.size == 0 or crop.shape[0] < 60 or crop.shape[1] < 60:
             return None
 
-        # Detect faces in the crop
-        face_locs = face_recognition.face_locations(crop, model="hog")
-        if not face_locs:
-            return None
+        # Ensure crop is contiguous C-order uint8 (dlib requirement)
+        crop = np.ascontiguousarray(crop, dtype=np.uint8)
 
-        # Encode the first face found
-        encodings = face_recognition.face_encodings(crop, face_locs[:1], num_jitters=1)
-        if not encodings:
+        # Detect and encode face in the crop
+        try:
+            encodings = face_recognition.face_encodings(crop)
+            if not encodings:
+                return None
+        except Exception:
             return None
 
         encoding = encodings[0]

@@ -166,8 +166,8 @@ def main():
 
             events = zone_tracker.update(detections)
 
-            # Face ID every 5th frame
-            if frame_count % 5 == 0:
+            # Face ID every 3rd frame
+            if frame_count % 3 == 0:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 for det in detections:
                     if not identifier.get_identity(det.track_id):
