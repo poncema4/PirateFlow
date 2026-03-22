@@ -1,6 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:wght@300;400;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --color-cream: #f8f4ec;
+  --color-cream-dk: #ede8dc;
+  --color-card: #ffffff;
+  --color-border: #ddd5c4;
+  --color-border-hover: #c0b09a;
+  --color-shu-blue: #004B8D;
+  --color-shu-blue-dk: #00345E;
+  --color-shu-blue-lt: #2B6FAF;
+  --color-navy: #1b2f4e;
+  --color-muted: #7a6a52;
+  --color-success: #2d6a4a;
+  --color-danger: #8b2a2a;
+  --color-warning: #c08030;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+}
+
 :root {
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
