@@ -336,8 +336,9 @@ async def cancel_booking(db, booking_id: str):
 async def get_utilization(db, building_id=None, room_type=None,
                            start_date="2026-01-01", end_date="2026-03-21",
                            granularity="daily"):
-    """Return utilization time series from usage_stats or access_events."""
-    conditions = ["us.date >= ? AND us.date <= ?"]
+    """Return utilization time series derived from bookings."""
+    conditions = ["date(bk.start_time) >= ? AND date(bk.start_time) <= ?",
+                  "bk.status != 'cancelled'"]
     params = [start_date, end_date]
 
     if building_id:
@@ -349,20 +350,22 @@ async def get_utilization(db, building_id=None, room_type=None,
 
     where = " AND ".join(conditions)
 
-    # Group by date (or week/month for other granularities)
     if granularity == "weekly":
-        group_expr = "strftime('%Y-W%W', us.date)"
+        group_expr = "strftime('%Y-W%W', bk.start_time)"
     elif granularity == "monthly":
-        group_expr = "strftime('%Y-%m', us.date)"
+        group_expr = "strftime('%Y-%m', bk.start_time)"
     else:
-        group_expr = "us.date"
+        group_expr = "date(bk.start_time)"
 
+    # Calculate utilization as booked hours / (num_rooms * 14h operating day)
     sql = f"""
         SELECT {group_expr} AS period,
-               ROUND(AVG(CASE WHEN us.total_hours_used > 0 THEN
-                   MIN(1.0, us.total_hours_used / 14.0) ELSE 0 END), 2) AS utilization_pct
-        FROM usage_stats us
-        JOIN rooms r ON us.room_id = r.id
+               ROUND(
+                   CAST(SUM((julianday(bk.end_time) - julianday(bk.start_time)) * 24) AS REAL)
+                   / MAX(1, (SELECT COUNT(*) FROM rooms) * 14.0),
+               2) AS utilization_pct
+        FROM bookings bk
+        JOIN rooms r ON bk.room_id = r.id
         JOIN floors f ON r.floor_id = f.id
         WHERE {where}
         GROUP BY period
@@ -370,13 +373,14 @@ async def get_utilization(db, building_id=None, room_type=None,
     """
     cursor = await db.execute(sql, params)
     rows = await cursor.fetchall()
-    return [{"period": r["period"], "utilization_pct": r["utilization_pct"]} for r in rows]
+    return [{"period": r["period"], "utilization_pct": min(1.0, r["utilization_pct"] or 0)} for r in rows]
 
 
 async def get_utilization_heatmap(db, building_id=None, start_date="2026-01-01", end_date="2026-03-21"):
-    """Return heatmap data: day_of_week x hour -> avg entries."""
-    conditions = ["ae.timestamp >= ? AND ae.timestamp <= ?"]
-    params = [f"{start_date}T00:00:00Z", f"{end_date}T23:59:59Z"]
+    """Return heatmap data: day_of_week x hour -> booking count."""
+    conditions = ["date(bk.start_time) >= ? AND date(bk.start_time) <= ?",
+                  "bk.status != 'cancelled'"]
+    params = [start_date, end_date]
 
     if building_id:
         conditions.append("f.building_id = ?")
@@ -385,24 +389,22 @@ async def get_utilization_heatmap(db, building_id=None, start_date="2026-01-01",
     where = " AND ".join(conditions)
 
     sql = f"""
-        SELECT CAST(strftime('%w', ae.timestamp) AS INTEGER) AS dow,
-               CAST(strftime('%H', ae.timestamp) AS INTEGER) AS hour,
+        SELECT CAST(strftime('%w', bk.start_time) AS INTEGER) AS dow,
+               CAST(strftime('%H', bk.start_time) AS INTEGER) AS hour,
                COUNT(*) AS entries
-        FROM access_events ae
-        JOIN rooms r ON ae.room_id = r.id
+        FROM bookings bk
+        JOIN rooms r ON bk.room_id = r.id
         JOIN floors f ON r.floor_id = f.id
-        WHERE ae.direction = 'entry' AND {where}
+        WHERE {where}
         GROUP BY dow, hour
     """
     cursor = await db.execute(sql, params)
     rows = await cursor.fetchall()
 
-    # Find max for normalization
     max_entries = max((r["entries"] for r in rows), default=1)
 
     cells = []
     for r in rows:
-        # Convert Sunday=0 to Monday=0
         day = (r["dow"] - 1) % 7
         cells.append({
             "day": day,
@@ -413,9 +415,10 @@ async def get_utilization_heatmap(db, building_id=None, start_date="2026-01-01",
 
 
 async def get_peak_hours(db, building_id=None, start_date="2026-01-01", end_date="2026-03-21"):
-    """Return average activity by hour of day."""
-    conditions = ["ae.timestamp >= ? AND ae.timestamp <= ?"]
-    params = [f"{start_date}T00:00:00Z", f"{end_date}T23:59:59Z"]
+    """Return booking activity by hour of day."""
+    conditions = ["date(bk.start_time) >= ? AND date(bk.start_time) <= ?",
+                  "bk.status != 'cancelled'"]
+    params = [start_date, end_date]
 
     if building_id:
         conditions.append("f.building_id = ?")
@@ -424,12 +427,12 @@ async def get_peak_hours(db, building_id=None, start_date="2026-01-01", end_date
     where = " AND ".join(conditions)
 
     sql = f"""
-        SELECT CAST(strftime('%H', ae.timestamp) AS INTEGER) AS hour,
+        SELECT CAST(strftime('%H', bk.start_time) AS INTEGER) AS hour,
                COUNT(*) AS total_entries
-        FROM access_events ae
-        JOIN rooms r ON ae.room_id = r.id
+        FROM bookings bk
+        JOIN rooms r ON bk.room_id = r.id
         JOIN floors f ON r.floor_id = f.id
-        WHERE ae.direction = 'entry' AND {where}
+        WHERE {where}
         GROUP BY hour
         ORDER BY hour
     """
