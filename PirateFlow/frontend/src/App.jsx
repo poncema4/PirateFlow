@@ -56,7 +56,7 @@ function AdminLayout({ children, alertCount }) {
       <Sidebar alertCount={alertCount} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, width: 0 }}>
         <Header alertCount={alertCount} />
-        <main style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+        <main style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "var(--bg-primary)" }}>
           {children}
         </main>
       </div>
