@@ -3,42 +3,9 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../api/client";
 
-const TAB_STYLE = (active) => ({
-  flex: 1,
-  padding: "8px 0",
-  fontSize: 12,
-  fontWeight: 600,
-  cursor: "pointer",
-  background: "none",
-  border: "none",
-  borderBottom: `2px solid ${active ? "#004B8D" : "transparent"}`,
-  color: active ? "#004B8D" : "#7a6a52",
-  transition: "all 150ms",
-  fontFamily: "'DM Sans', system-ui, sans-serif",
-});
-
-const INPUT_STYLE = {
-  background: "#f8f4ec",
-  border: "1px solid #ddd5c4",
-  borderRadius: 8,
-  padding: "9px 12px",
-  fontSize: 13,
-  color: "#1b2f4e",
-  outline: "none",
-  width: "100%",
-  boxSizing: "border-box",
-  transition: "border-color 150ms",
-  fontFamily: "'DM Sans', system-ui, sans-serif",
-};
-
 function Spinner() {
   return (
-    <span style={{
-      width: 14, height: 14,
-      border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff",
-      borderRadius: "50%", display: "inline-block",
-      animation: "spin 0.7s linear infinite",
-    }} />
+    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
   );
 }
 
@@ -102,73 +69,94 @@ export default function Login() {
     }
   };
 
+  const idDisabled = loading || studentId.length < 7;
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#f8f4ec" }}>
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        <div
-          className="rounded-2xl p-7 flex flex-col gap-4"
-          style={{ background: "#fff", border: "1px solid #ddd5c4", boxShadow: "0 2px 16px rgba(0,75,141,.08)" }}
-        >
+    <div className="min-h-screen flex items-center justify-center px-4 bg-cream">
+      <div className="w-full max-w-[420px]">
+        {/* Card */}
+        <div className="bg-card rounded-2xl p-8 flex flex-col gap-5 border border-border shadow-lg animate-[fadeUp_.35s_ease_both]">
           {/* Branding */}
-          <div className="flex flex-col items-center gap-1.5 text-center">
-            <img src="/PirateFlow.png" alt="PirateFlow" style={{ width: 48, height: 48, objectFit: "contain" }} />
-            <h1 style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: 22, fontWeight: 700, color: "#004B8D", letterSpacing: "-0.5px",
-            }}>
+          <div className="flex flex-col items-center gap-2 text-center mb-1">
+            <img
+              src="/PirateFlow.png"
+              alt="PirateFlow"
+              className="w-14 h-14 object-contain"
+            />
+            <h1 className="font-display text-2xl font-bold text-shu-blue tracking-tight">
               PirateFlow
             </h1>
-            <p style={{ fontSize: 11, color: "#7a6a52" }}>
+            <p className="text-[13px] text-muted">
               Seton Hall University &middot; Campus Space Booking
             </p>
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", borderBottom: "1px solid #ddd5c4" }}>
-            <button style={TAB_STYLE(tab === "id")} onClick={() => { setTab("id"); setError(""); }}>
-              Student ID
-            </button>
-            <button style={TAB_STYLE(tab === "piratenet")} onClick={() => { setTab("piratenet"); setError(""); }}>
-              PirateNet Login
-            </button>
+          <div className="flex border-b border-border">
+            {[
+              { key: "id", label: "Student ID" },
+              { key: "piratenet", label: "PirateNet Login" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => { setTab(key); setError(""); }}
+                className={`
+                  flex-1 py-2.5 text-[13px] font-semibold cursor-pointer
+                  bg-transparent border-none border-b-2 transition-all duration-200 font-body
+                  ${tab === key
+                    ? "border-b-shu-blue text-shu-blue"
+                    : "border-b-transparent text-muted hover:text-navy"
+                  }
+                `}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* Student ID Tab */}
           {tab === "id" && (
-            <form onSubmit={handleIdLookup} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="student-id" style={{ fontSize: 12, fontWeight: 500, color: "#7a6a52" }}>
+            <form onSubmit={handleIdLookup} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="student-id" className="text-[13px] font-medium text-navy">
                   SHU ID Number
                 </label>
                 <input
-                  id="student-id" type="text" inputMode="numeric" autoComplete="off" required
-                  value={studentId} onChange={(e) => setStudentId(e.target.value.replace(/\D/g, "").slice(0, 7))}
-                  placeholder="e.g. 9012345" maxLength={7} style={INPUT_STYLE}
-                  onFocus={(e) => (e.target.style.borderColor = "#004B8D")}
-                  onBlur={(e) => (e.target.style.borderColor = "#ddd5c4")}
+                  id="student-id"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  required
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                  placeholder="e.g. 9012345"
+                  maxLength={7}
+                  className="bg-cream border border-border rounded-xl px-4 py-3 text-sm text-navy outline-none w-full font-body transition-colors duration-200 focus:border-shu-blue placeholder:text-muted/50"
                 />
-                <p style={{ fontSize: 10, color: "#7a6a52" }}>Enter your 7-digit student ID from your SHU card</p>
+                <p className="text-[11px] text-muted">
+                  Enter your 7-digit student ID from your SHU card
+                </p>
               </div>
 
               {error && (
-                <p role="alert" style={{
-                  fontSize: 12, color: "#8b2a2a", background: "#faeaea",
-                  border: "1px solid rgba(139,42,42,.25)", borderRadius: 6, padding: "6px 10px",
-                }}>
+                <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-xl px-4 py-2.5">
                   {error}
                 </p>
               )}
 
-              <button type="submit" disabled={loading || studentId.length < 7} style={{
-                background: (loading || studentId.length < 7) ? "#ddd5c4" : "#004B8D",
-                color: (loading || studentId.length < 7) ? "#7a6a52" : "#fff",
-                border: "none", borderRadius: 8, padding: "10px 0",
-                fontSize: 13, fontWeight: 600, width: "100%",
-                cursor: (loading || studentId.length < 7) ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                transition: "all .22s ease",
-                fontFamily: "'DM Sans', system-ui, sans-serif",
-              }}>
+              <button
+                type="submit"
+                disabled={idDisabled}
+                className={`
+                  w-full py-3 rounded-xl text-sm font-semibold
+                  flex items-center justify-center gap-2
+                  transition-all duration-200 border-none cursor-pointer font-body
+                  ${idDisabled
+                    ? "bg-border text-muted cursor-not-allowed"
+                    : "bg-shu-blue text-white hover:bg-shu-blue-lt shadow-sm hover:shadow-md"
+                  }
+                `}
+              >
                 {loading && <Spinner />}
                 {loading ? "Looking up..." : "Continue"}
               </button>
@@ -177,58 +165,68 @@ export default function Login() {
 
           {/* PirateNet Tab */}
           {tab === "piratenet" && (
-            <form onSubmit={handlePirateNet} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="email" style={{ fontSize: 12, fontWeight: 500, color: "#7a6a52" }}>Email</label>
-                <input id="email" type="email" autoComplete="email" required
-                  value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@shu.edu" style={INPUT_STYLE}
-                  onFocus={(e) => (e.target.style.borderColor = "#004B8D")}
-                  onBlur={(e) => (e.target.style.borderColor = "#ddd5c4")}
+            <form onSubmit={handlePirateNet} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="email" className="text-[13px] font-medium text-navy">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@shu.edu"
+                  className="bg-cream border border-border rounded-xl px-4 py-3 text-sm text-navy outline-none w-full font-body transition-colors duration-200 focus:border-shu-blue placeholder:text-muted/50"
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="password" style={{ fontSize: 12, fontWeight: 500, color: "#7a6a52" }}>Password</label>
-                <div style={{ position: "relative" }}>
-                  <input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
-                    value={password} onChange={(e) => setPassword(e.target.value)}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="password" className="text-[13px] font-medium text-navy">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    style={{ ...INPUT_STYLE, paddingRight: 46 }}
-                    onFocus={(e) => (e.target.style.borderColor = "#004B8D")}
-                    onBlur={(e) => (e.target.style.borderColor = "#ddd5c4")}
+                    className="bg-cream border border-border rounded-xl px-4 py-3 pr-16 text-sm text-navy outline-none w-full font-body transition-colors duration-200 focus:border-shu-blue placeholder:text-muted/50"
                   />
-                  <button type="button" onClick={() => setShowPassword((v) => !v)} tabIndex={-1}
-                    style={{
-                      position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-                      background: "none", border: "none", cursor: "pointer",
-                      color: "#7a6a52", fontSize: 11, padding: 2,
-                      fontFamily: "'DM Sans', system-ui, sans-serif",
-                    }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[12px] text-muted hover:text-navy font-body font-medium px-1 py-0.5"
+                  >
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
 
               {error && (
-                <p role="alert" style={{
-                  fontSize: 12, color: "#8b2a2a", background: "#faeaea",
-                  border: "1px solid rgba(139,42,42,.25)", borderRadius: 6, padding: "6px 10px",
-                }}>
+                <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-xl px-4 py-2.5">
                   {error}
                 </p>
               )}
 
-              <button type="submit" disabled={loading} style={{
-                background: loading ? "#ddd5c4" : "#004B8D",
-                color: loading ? "#7a6a52" : "#fff",
-                border: "none", borderRadius: 8, padding: "10px 0",
-                fontSize: 13, fontWeight: 600, width: "100%",
-                cursor: loading ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                transition: "all .22s ease",
-                fontFamily: "'DM Sans', system-ui, sans-serif",
-              }}>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`
+                  w-full py-3 rounded-xl text-sm font-semibold
+                  flex items-center justify-center gap-2
+                  transition-all duration-200 border-none cursor-pointer font-body
+                  ${loading
+                    ? "bg-border text-muted cursor-not-allowed"
+                    : "bg-shu-blue text-white hover:bg-shu-blue-lt shadow-sm hover:shadow-md"
+                  }
+                `}
+              >
                 {loading && <Spinner />}
                 {loading ? "Signing in..." : "Sign In"}
               </button>
@@ -236,25 +234,25 @@ export default function Login() {
           )}
 
           {/* Demo credentials */}
-          <div style={{ background: "#f8f4ec", border: "1px solid #ddd5c4", borderRadius: 8, padding: "8px 10px" }}>
-            <p style={{ fontSize: 9, color: "#7a6a52", marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Demo accounts
+          <div className="bg-cream border border-border rounded-xl p-4">
+            <p className="text-[10px] text-muted mb-2.5 font-bold uppercase tracking-widest">
+              Demo Accounts
             </p>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1.5">
               {tab === "id" ? (
                 [
                   { label: "Student", id: "9012345" },
                   { label: "Staff", id: "9067890" },
                   { label: "Admin", id: "9078901" },
                 ].map(({ label, id }) => (
-                  <button key={id} type="button" onClick={() => setStudentId(id)}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      textAlign: "left", padding: "1px 0", color: "#7a6a52", fontSize: 11,
-                      display: "flex", gap: 6, fontFamily: "'DM Sans', system-ui, sans-serif",
-                    }}>
-                    <span style={{ color: "#004B8D", fontWeight: 600, minWidth: 42 }}>{label}</span>
-                    <span>{id}</span>
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setStudentId(id)}
+                    className="flex items-center gap-3 bg-transparent border-none cursor-pointer text-left py-1.5 px-2 rounded-lg hover:bg-white transition-colors font-body text-[13px] text-muted group"
+                  >
+                    <span className="text-shu-blue font-semibold min-w-[52px]">{label}</span>
+                    <span className="group-hover:text-navy transition-colors">{id}</span>
                   </button>
                 ))
               ) : (
@@ -263,27 +261,26 @@ export default function Login() {
                   { label: "Staff", email: "staff@shu.edu" },
                   { label: "Student", email: "student@shu.edu" },
                 ].map(({ label, email: e }) => (
-                  <button key={e} type="button" onClick={() => { setEmail(e); setPassword("openshu2026"); }}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      textAlign: "left", padding: "1px 0", color: "#7a6a52", fontSize: 11,
-                      display: "flex", gap: 6, fontFamily: "'DM Sans', system-ui, sans-serif",
-                    }}>
-                    <span style={{ color: "#004B8D", fontWeight: 600, minWidth: 42 }}>{label}</span>
-                    <span>{e} &middot; openshu2026</span>
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => { setEmail(e); setPassword("openshu2026"); }}
+                    className="flex items-center gap-3 bg-transparent border-none cursor-pointer text-left py-1.5 px-2 rounded-lg hover:bg-white transition-colors font-body text-[13px] text-muted group"
+                  >
+                    <span className="text-shu-blue font-semibold min-w-[52px]">{label}</span>
+                    <span className="group-hover:text-navy transition-colors">{e} &middot; openshu2026</span>
                   </button>
                 ))
               )}
             </div>
           </div>
 
-          <button onClick={() => navigate("/")}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: "#7a6a52", fontSize: 11, padding: 2,
-              fontFamily: "'DM Sans', system-ui, sans-serif",
-            }}>
-            Back to campus
+          {/* Back link */}
+          <button
+            onClick={() => navigate("/")}
+            className="bg-transparent border-none cursor-pointer text-muted text-[13px] font-body hover:text-navy transition-colors py-1"
+          >
+            &larr; Back to campus
           </button>
         </div>
       </div>

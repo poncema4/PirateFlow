@@ -42,7 +42,7 @@ function PublicLayout({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
       <TopBar />
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 32px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 32px 48px" }}>
         {children}
       </div>
     </div>
