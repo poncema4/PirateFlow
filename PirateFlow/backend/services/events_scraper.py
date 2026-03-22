@@ -27,25 +27,26 @@ ENGAGE_IMAGE_BASE = "https://shu.campuslabs.com/engage/image/"
 PAGE_SIZE = 100
 RATE_LIMIT_DELAY = 2.0  # seconds between API requests
 
-# Known SHU building name patterns -> building codes for auto-matching
+# Known SHU building name patterns -> (code, full name)
 LOCATION_PATTERNS = {
-    r"jubilee|jub\b": "JUB",
-    r"walsh\s*lib": "WAL",
-    r"mcnulty|mcn\b": "MCN",
-    r"corrigan|cor\b": "COR",
-    r"university\s*center|galleon": "UC",
-    r"arts?\s*(?:and|&)\s*sci": "A&S",
-    r"schwartz|nu\b": "SCH",
-    r"boland": "BOL",
-    r"xavier": "XAV",
-    r"fahy": "FAH",
-    r"chapel|immaculate": "CHP",
-    r"rec\w*\s*center|gym": "REC",
-    r"stafford": "STP",
-    r"bayley": "BAY",
-    r"presidents": "PRE",
-    r"aquinas": "AQU",
-    r"serra": "SER",
+    r"jubilee|jub\b":               ("JUB", "Jubilee Hall"),
+    r"walsh\s*lib|library":         ("WLB", "Walsh Library"),
+    r"mcnulty|mcn\b":              ("MCN", "McNulty Hall"),
+    r"corrigan|cor\b":             ("COR", "Corrigan Hall"),
+    r"university\s*center|galleon": ("UC",  "University Center"),
+    r"arts?\s*(?:and|&)\s*sci":    ("A&S", "Arts & Sciences Hall"),
+    r"schwartz":                    ("SCH", "Schwartz Hall"),
+    r"boland":                      ("BOL", "Boland Hall"),
+    r"xavier":                      ("XAV", "Xavier Hall"),
+    r"fahy":                        ("FAH", "Fahy Hall"),
+    r"chapel|immaculate":           ("CHP", "Chapel of the Immaculate Conception"),
+    r"rec\w*\s*center|gym":        ("REC", "Recreation Center"),
+    r"stafford":                    ("STA", "Stafford Hall"),
+    r"bayley":                      ("BAY", "Bayley Hall"),
+    r"presidents":                  ("PRE", "Presidents Hall"),
+    r"aquinas":                     ("AQU", "Aquinas Hall"),
+    r"serra":                       ("SER", "Serra Hall"),
+    r"mooney":                      ("MOO", "Mooney Hall"),
 }
 
 
@@ -201,24 +202,29 @@ async def _scrape_pages(
 
 async def _auto_match_locations() -> int:
     """Match event locations to buildings/rooms in our DB.
+    Auto-creates buildings and rooms that don't exist yet.
     Updates campus_events with matched building_id and room_id.
     Returns count of events matched.
     """
     db = await get_db()
 
-    # Get all buildings with their codes
+    # Load existing buildings keyed by code
     cursor = await db.execute("SELECT id, code, name FROM buildings")
-    buildings = {r["code"]: r for r in await cursor.fetchall()}
+    buildings = {r["code"]: dict(r) for r in await cursor.fetchall()}
     building_names = {r["name"].lower(): r for r in buildings.values()}
 
-    # Get all rooms
+    # Load existing rooms
     cursor = await db.execute("""
-        SELECT r.id, r.name, f.building_id, b.code AS building_code, b.name AS building_name
+        SELECT r.id, r.name, f.building_id, b.code AS building_code
         FROM rooms r
         JOIN floors f ON r.floor_id = f.id
         JOIN buildings b ON f.building_id = b.id
     """)
     rooms = [dict(r) for r in await cursor.fetchall()]
+
+    # Track floors we've created: (building_id, floor_num) -> floor_id
+    cursor = await db.execute("SELECT id, building_id, floor_number FROM floors")
+    existing_floors = {(r["building_id"], r["floor_number"]): r["id"] for r in await cursor.fetchall()}
 
     # Get unmatched events
     cursor = await db.execute(
@@ -226,36 +232,81 @@ async def _auto_match_locations() -> int:
     )
     events = [dict(r) for r in await cursor.fetchall()]
 
+    created_buildings = 0
+    created_rooms = 0
     matched = 0
+
     for event in events:
         loc = event["location"].lower()
         building_id = None
+        matched_code = None
+        matched_name = None
         room_id = None
 
-        # Try pattern matching first
-        for pattern, code in LOCATION_PATTERNS.items():
+        # Try pattern matching
+        for pattern, (code, full_name) in LOCATION_PATTERNS.items():
             if re.search(pattern, loc, re.IGNORECASE):
+                matched_code = code
+                matched_name = full_name
                 if code in buildings:
                     building_id = buildings[code]["id"]
                 break
 
         # Try direct building name match
-        if not building_id:
+        if not building_id and not matched_code:
             for bname, bdata in building_names.items():
                 if bname in loc:
                     building_id = bdata["id"]
+                    matched_code = bdata["code"]
                     break
 
-        # Try to match specific room (e.g., "Jubilee 430" -> room 430 in Jubilee)
+        # Auto-create building if pattern matched but building doesn't exist
+        if not building_id and matched_code:
+            building_id = f"bld_{uuid.uuid4().hex[:8]}"
+            await db.execute(
+                "INSERT INTO buildings VALUES (?,?,?,?,?,NULL,NULL)",
+                (building_id, matched_name, matched_code, "400 South Orange Ave, South Orange, NJ 07079", 4),
+            )
+            buildings[matched_code] = {"id": building_id, "code": matched_code, "name": matched_name}
+            building_names[matched_name.lower()] = buildings[matched_code]
+            # Create 4 default floors
+            for fn in range(1, 5):
+                fid = f"flr_{uuid.uuid4().hex[:8]}"
+                await db.execute("INSERT INTO floors VALUES (?,?,?,?)", (fid, building_id, fn, f"Floor {fn}"))
+                existing_floors[(building_id, fn)] = fid
+            created_buildings += 1
+            print(f"    Auto-created building: {matched_name} ({matched_code})")
+
+        # Try to match or create room
         if building_id:
             room_match = re.search(r'(\d{2,4})', event["location"])
             if room_match:
                 room_num = room_match.group(1)
+                # Check existing rooms
                 for room in rooms:
-                    if (room["building_id"] == building_id and
-                            room_num in room["name"]):
+                    if room["building_id"] == building_id and room_num in room["name"]:
                         room_id = room["id"]
                         break
+
+                # Auto-create room if not found
+                if not room_id:
+                    floor_num = int(room_num[0]) if len(room_num) >= 3 else 1
+                    floor_num = min(floor_num, 4)  # cap at 4 floors
+                    floor_key = (building_id, floor_num)
+                    floor_id = existing_floors.get(floor_key)
+                    if not floor_id:
+                        floor_id = f"flr_{uuid.uuid4().hex[:8]}"
+                        await db.execute("INSERT INTO floors VALUES (?,?,?,?)", (floor_id, building_id, floor_num, f"Floor {floor_num}"))
+                        existing_floors[floor_key] = floor_id
+
+                    room_id = f"rm_{uuid.uuid4().hex[:8]}"
+                    room_name = f"Room {room_num}"
+                    await db.execute(
+                        "INSERT INTO rooms VALUES (?,?,?,?,?,NULL,1,'available',NULL)",
+                        (room_id, floor_id, room_name, "multipurpose", 30),
+                    )
+                    rooms.append({"id": room_id, "name": room_name, "building_id": building_id, "building_code": matched_code or ""})
+                    created_rooms += 1
 
         if building_id:
             await db.execute(
@@ -265,6 +316,8 @@ async def _auto_match_locations() -> int:
             matched += 1
 
     await db.commit()
+    if created_buildings or created_rooms:
+        print(f"    Auto-created {created_buildings} buildings, {created_rooms} rooms from events")
     return matched
 
 
