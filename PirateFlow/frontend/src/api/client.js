@@ -148,6 +148,79 @@ export const api = {
   detectAnomalies: () =>
     apiClient.post("/ai/anomalies", {}).then((r) => r.data),
 
+  // Admin CRUD — Buildings
+  createBuilding: (body) =>
+    apiClient.post("/buildings", body).then((r) => r.data),
+
+  updateBuilding: (id, body) =>
+    apiClient.put(`/buildings/${id}`, body).then((r) => r.data),
+
+  deleteBuilding: (id) =>
+    apiClient.delete(`/buildings/${id}`).then((r) => r.data),
+
+  // Admin CRUD — Floors
+  createFloor: (buildingId, body) =>
+    apiClient.post(`/buildings/${buildingId}/floors`, body).then((r) => r.data),
+
+  deleteFloor: (floorId) =>
+    apiClient.delete(`/floors/${floorId}`).then((r) => r.data),
+
+  // Admin CRUD — Rooms
+  createRoom: (body) =>
+    apiClient.post("/rooms", body).then((r) => r.data),
+
+  updateRoom: (id, body) =>
+    apiClient.put(`/rooms/${id}`, body).then((r) => r.data),
+
+  deleteRoom: (id) =>
+    apiClient.delete(`/rooms/${id}`).then((r) => r.data),
+
+  // Admin CRUD — Users
+  getUsers: (params = {}) =>
+    apiClient.get("/users", { params }).then((r) => r.data),
+
+  createUser: (body) =>
+    apiClient.post("/users", body).then((r) => r.data),
+
+  updateUser: (id, body) =>
+    apiClient.put(`/users/${id}`, body).then((r) => r.data),
+
+  deleteUser: (id) =>
+    apiClient.delete(`/users/${id}`).then((r) => r.data),
+
+  // Admin — Cameras
+  getCameras: (params = {}) =>
+    apiClient.get("/cameras", { params }).then((r) => r.data),
+
+  createCamera: (body) =>
+    apiClient.post("/cameras", body).then((r) => r.data),
+
+  updateCamera: (id, body) =>
+    apiClient.put(`/cameras/${id}`, body).then((r) => r.data),
+
+  deleteCamera: (id) =>
+    apiClient.delete(`/cameras/${id}`).then((r) => r.data),
+
+  getCameraEvents: (cameraId, params = {}) =>
+    apiClient.get(cameraId === "all" ? "/cameras/events/all" : `/cameras/${cameraId}/events`, { params }).then((r) => r.data),
+
+  // Admin — Access Rules
+  getAccessRules: (params = {}) =>
+    apiClient.get("/cameras/rules/all", { params }).then((r) => r.data),
+
+  createAccessRule: (body) =>
+    apiClient.post("/cameras/rules", body).then((r) => r.data),
+
+  deleteAccessRule: (ruleId) =>
+    apiClient.delete(`/cameras/rules/${ruleId}`).then((r) => r.data),
+
+  // Admin — Alerts
+  getAlerts: (params = {}) =>
+    apiClient.get("/cameras/alerts/all", { params }).then((r) => r.data),
+
+  acknowledgeAlert: (alertId) =>
+    apiClient.patch(`/cameras/alerts/${alertId}/acknowledge`).then((r) => r.data),
+
   // Demo
   startDemo: () =>
     apiClient.post("/demo/start").then((r) => r.data),

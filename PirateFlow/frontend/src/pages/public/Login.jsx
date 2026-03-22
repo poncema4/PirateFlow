@@ -107,7 +107,7 @@ export default function Login() {
 
           {/* Branding */}
           <div className="flex flex-col items-center gap-1.5 text-center">
-            <span style={{ fontSize: 32, lineHeight: 1 }}>&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</span>
+            <img src="/PirateFlow.png" alt="PirateFlow" style={{ width: 48, height: 48, objectFit: "contain" }} />
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "var(--accent)", letterSpacing: "-0.5px" }}>
               PirateFlow
             </h1>

@@ -141,11 +141,15 @@ async def _create_tables(db: aiosqlite.Connection):
     -- =======================================================================
 
     CREATE TABLE IF NOT EXISTS cameras (
-        id           TEXT PRIMARY KEY,
-        room_id      TEXT NOT NULL REFERENCES rooms(id),
-        name         TEXT NOT NULL,
-        status       TEXT NOT NULL DEFAULT 'online',
-        installed_at TEXT NOT NULL
+        id                TEXT PRIMARY KEY,
+        room_id           TEXT NOT NULL REFERENCES rooms(id),
+        name              TEXT NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'online',
+        installed_at      TEXT NOT NULL,
+        rtsp_url          TEXT,
+        doorway_polygon   TEXT,
+        room_direction    TEXT,
+        entry_direction   TEXT NOT NULL DEFAULT 'top_to_bottom'
     );
 
     CREATE TABLE IF NOT EXISTS access_rules (

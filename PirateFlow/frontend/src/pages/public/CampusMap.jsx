@@ -1,21 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { api } from "../../api/client";
 
-const BUILDINGS = [
-  { id: "bld_004", name: "Walsh Library", code: "WAL", description: "Study Rooms, Computer Labs & Group Spaces", floors: 5, rooms: 25, color: "#10b981",
-    path: "M 195,195 L 245,185 L 255,210 L 250,230 L 200,235 Z", labelX: 225, labelY: 212 },
-  { id: "bld_005", name: "University Center", code: "UC", description: "Event Spaces, Meeting Rooms & Dining", floors: 3, rooms: 20, color: "#8b5cf6",
-    path: "M 310,270 L 365,260 L 375,290 L 370,310 L 315,315 Z", labelX: 342, labelY: 290 },
-  { id: "bld_001", name: "Jubilee Hall", code: "JUB", description: "Classrooms & Offices", floors: 4, rooms: 22, color: "#6366f1",
-    path: "M 285,350 L 325,345 L 330,370 L 290,375 Z", labelX: 308, labelY: 362 },
-  { id: "bld_002", name: "McNulty Hall", code: "MCN", description: "Science Labs & Classrooms", floors: 4, rooms: 28, color: "#f59e0b",
-    path: "M 530,180 L 590,170 L 600,210 L 595,240 L 535,245 Z", labelX: 565, labelY: 208 },
-  { id: "bld_003", name: "Corrigan Hall", code: "COR", description: "Lecture Halls & Music Department", floors: 3, rooms: 18, color: "#ef4444",
-    path: "M 545,270 L 590,265 L 595,290 L 550,295 Z", labelX: 570, labelY: 282 },
-  { id: "bld_006", name: "Arts & Sciences Hall", code: "A&S", description: "Classrooms & Seminar Rooms", floors: 3, rooms: 20, color: "#ec4899",
-    path: "M 370,200 L 420,195 L 425,220 L 375,225 Z", labelX: 398, labelY: 212 },
-];
+// SVG map positions keyed by building code — visual layout data
+const MAP_POSITIONS = {
+  WAL: { color: "#10b981", path: "M 195,195 L 245,185 L 255,210 L 250,230 L 200,235 Z", labelX: 225, labelY: 212 },
+  UC:  { color: "#8b5cf6", path: "M 310,270 L 365,260 L 375,290 L 370,310 L 315,315 Z", labelX: 342, labelY: 290 },
+  JUB: { color: "#6366f1", path: "M 285,350 L 325,345 L 330,370 L 290,375 Z", labelX: 308, labelY: 362 },
+  MCN: { color: "#f59e0b", path: "M 530,180 L 590,170 L 600,210 L 595,240 L 535,245 Z", labelX: 565, labelY: 208 },
+  COR: { color: "#ef4444", path: "M 545,270 L 590,265 L 595,290 L 550,295 Z", labelX: 570, labelY: 282 },
+  "A&S": { color: "#ec4899", path: "M 370,200 L 420,195 L 425,220 L 375,225 Z", labelX: 398, labelY: 212 },
+};
+
+const DEFAULT_COLORS = ["#10b981", "#8b5cf6", "#6366f1", "#f59e0b", "#ef4444", "#ec4899"];
 
 const CONTEXT = [
   { label: "Boland", path: "M 400,330 L 440,325 L 445,350 L 405,355 Z" },
@@ -50,6 +48,22 @@ export default function CampusMap() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [hoveredId, setHoveredId] = useState(null);
+  const [apiBuildings, setApiBuildings] = useState([]);
+
+  useEffect(() => {
+    api.getBuildings().then(setApiBuildings).catch(() => {});
+  }, []);
+
+  // Merge API data with map positions
+  const BUILDINGS = apiBuildings.map((b, i) => {
+    const pos = MAP_POSITIONS[b.code] || {};
+    return {
+      id: b.id, name: b.name, code: b.code,
+      floors: b.total_floors, rooms: b.room_count,
+      color: pos.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+      path: pos.path, labelX: pos.labelX, labelY: pos.labelY,
+    };
+  });
 
   return (
     <div style={{ minHeight: "100vh", background: "#090b0f", display: "flex", flexDirection: "column" }}>
@@ -63,7 +77,7 @@ export default function CampusMap() {
         height: 52,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 20 }}>&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</span>
+          <img src="/PirateFlow.png" alt="PirateFlow" style={{ width: 28, height: 28, objectFit: "contain" }} />
           <div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: "var(--accent)", letterSpacing: "-0.5px", lineHeight: 1 }}>
               PirateFlow
@@ -143,7 +157,7 @@ export default function CampusMap() {
                 </g>
               ))}
 
-              {BUILDINGS.map((b) => {
+              {BUILDINGS.filter(b => b.path).map((b) => {
                 const isHovered = hoveredId === b.id;
                 return (
                   <g key={b.id} onClick={() => navigate(`/spaces/${b.id}`)} onMouseEnter={() => setHoveredId(b.id)} onMouseLeave={() => setHoveredId(null)} style={{ cursor: "pointer" }}>

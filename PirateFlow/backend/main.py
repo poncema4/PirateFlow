@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 
 from middleware.errors import install_error_handlers
 from middleware.logging_webhook import install_webhook_logging, send_discord, COLOR_GREEN, COLOR_RED
-from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access
+from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access, users, cameras
 
 load_dotenv()
 
@@ -29,6 +29,13 @@ async def lifespan(app: FastAPI):
     print("PirateFlow API starting up...")
     await init_db()
     await seed_database()
+
+    # Load enrolled faces from DB for face recognition
+    try:
+        from services.face_service import load_enrolled_faces
+        await load_enrolled_faces()
+    except Exception as e:
+        print(f"Face loading skipped: {e}")
 
     # Notify Discord on startup
     await send_discord(
@@ -89,6 +96,8 @@ app.include_router(ai.router)
 app.include_router(websocket.router)
 app.include_router(demo.router)
 app.include_router(face_access.router)
+app.include_router(users.router)
+app.include_router(cameras.router)
 
 
 # --- Health Check ---

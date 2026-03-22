@@ -114,9 +114,55 @@ class StudentLookupRequest(BaseModel):
     student_id: str
 
 
+class UserCreateRequest(BaseModel):
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    role: UserRole = UserRole.student
+    department: Optional[str] = None
+    major: Optional[str] = None
+    year: Optional[str] = None
+    student_id: Optional[str] = None
+
+
+class UserUpdateRequest(BaseModel):
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    department: Optional[str] = None
+    major: Optional[str] = None
+    year: Optional[str] = None
+    student_id: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Buildings & Floors
 # ---------------------------------------------------------------------------
+
+class BuildingCreateRequest(BaseModel):
+    name: str
+    code: str
+    address: Optional[str] = None
+    total_floors: int = 1
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class BuildingUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    address: Optional[str] = None
+    total_floors: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class FloorCreateRequest(BaseModel):
+    floor_number: int
+    name: str
+
 
 class BuildingOut(BaseModel):
     id: str
@@ -139,6 +185,28 @@ class FloorOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Rooms
 # ---------------------------------------------------------------------------
+
+class RoomCreateRequest(BaseModel):
+    floor_id: str
+    name: str
+    room_type: RoomType
+    capacity: int
+    hourly_rate: Optional[float] = None
+    is_bookable: bool = True
+    description: Optional[str] = None
+    equipment: list[str] = []
+
+
+class RoomUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    room_type: Optional[RoomType] = None
+    capacity: Optional[int] = None
+    hourly_rate: Optional[float] = None
+    is_bookable: Optional[bool] = None
+    status: Optional[RoomStatus] = None
+    description: Optional[str] = None
+    equipment: Optional[list[str]] = None
+
 
 class RoomSummaryOut(BaseModel):
     id: str
@@ -340,6 +408,88 @@ class AccessLogEntry(BaseModel):
     had_valid_booking: bool
     alert_sent: bool
     captured_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Cameras & Access Rules
+# ---------------------------------------------------------------------------
+
+class CameraCreateRequest(BaseModel):
+    room_id: str
+    name: str
+    rtsp_url: Optional[str] = None
+    doorway_polygon: Optional[list[list[float]]] = None  # [[x,y], ...] normalized 0-1
+    room_direction: Optional[list[float]] = None  # [dx, dy] unit vector pointing into room
+    entry_direction: str = "top_to_bottom"
+
+
+class CameraUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    rtsp_url: Optional[str] = None
+    status: Optional[str] = None
+    doorway_polygon: Optional[list[list[float]]] = None
+    room_direction: Optional[list[float]] = None
+    entry_direction: Optional[str] = None
+
+
+class CameraOut(BaseModel):
+    id: str
+    room_id: str
+    room_name: Optional[str] = None
+    building_name: Optional[str] = None
+    name: str
+    rtsp_url: Optional[str] = None
+    status: str
+    doorway_polygon: Optional[list[list[float]]] = None
+    room_direction: Optional[list[float]] = None
+    entry_direction: str = "top_to_bottom"
+    installed_at: str
+
+
+class AccessRuleCreateRequest(BaseModel):
+    role: Optional[str] = None
+    user_id: Optional[str] = None
+    room_id: Optional[str] = None
+    building_id: Optional[str] = None
+    day_of_week: Optional[str] = None  # "monday,tuesday,..." or None for all
+    start_hour: int = 0
+    end_hour: int = 23
+
+
+class AccessRuleOut(BaseModel):
+    id: str
+    role: Optional[str] = None
+    user_id: Optional[str] = None
+    room_id: Optional[str] = None
+    building_id: Optional[str] = None
+    day_of_week: Optional[str] = None
+    start_hour: int
+    end_hour: int
+    created_at: str
+
+
+class AccessEventOut(BaseModel):
+    id: str
+    camera_id: str
+    room_id: str
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    direction: str  # "entry" or "exit"
+    authorized: bool
+    confidence: Optional[float] = None
+    timestamp: str
+
+
+class AlertOut(BaseModel):
+    id: str
+    event_id: Optional[str] = None
+    room_id: Optional[str] = None
+    user_id: Optional[str] = None
+    alert_type: str
+    severity: str
+    description: str
+    acknowledged: bool = False
+    created_at: str
 
 
 # ---------------------------------------------------------------------------

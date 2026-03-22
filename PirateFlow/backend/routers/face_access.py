@@ -80,7 +80,7 @@ async def remove_user_face(
     admin: UserPayload = Depends(require_role(UserRole.admin)),
 ):
     """Admin: remove a user's face encoding."""
-    removed = face_service.remove_face(user_id)
+    removed = await face_service.remove_face(user_id)
     if not removed:
         raise HTTPException(status_code=404, detail="No face encoding found for this user.")
     return {"status": "removed", "user_id": user_id}
@@ -106,9 +106,17 @@ async def verify_face(
     # Try to identify the face
     match = await face_service.identify_face(image_bytes)
 
-    # Room name lookup (stub — will use DB later)
-    room_name = f"Room {body.room_id}"
-    building_name = "Campus"
+    # Look up real room/building names from DB
+    from services.database import get_db
+    from services.queries import get_room_by_id
+    db = await get_db()
+    room_info = await get_room_by_id(db, body.room_id)
+    if room_info:
+        room_name = room_info["room"]["name"]
+        building_name = room_info["room"]["building_name"]
+    else:
+        room_name = f"Room {body.room_id}"
+        building_name = "Campus"
 
     if match is None:
         # Face not recognized at all
@@ -136,7 +144,7 @@ async def verify_face(
     user_name = face_service.get_user_name(user_id) or user_id
 
     # Check if they have a valid booking for this room right now
-    has_booking = face_service.check_booking_validity(user_id, body.room_id)
+    has_booking = await face_service.check_booking_validity(user_id, body.room_id)
 
     alert_sent = False
     if not has_booking:

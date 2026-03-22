@@ -9,6 +9,9 @@ import Dashboard from "./pages/admin/Dashboard";
 import Analytics from "./pages/admin/Analytics";
 import Revenue from "./pages/admin/Revenue";
 import Alerts from "./pages/admin/Alerts";
+import ManageSpaces from "./pages/admin/ManageSpaces";
+import ManageUsers from "./pages/admin/ManageUsers";
+import Cameras from "./pages/admin/Cameras";
 import BuildingDetail from "./pages/spaces/BuildingDetail";
 import CreateBooking from "./pages/bookings/CreateBooking";
 import MyBookings from "./pages/bookings/MyBookings";
@@ -74,6 +77,9 @@ export default function App() {
             <Route path="/analytics" element={<AdminRoute><Layout><Analytics /></Layout></AdminRoute>} />
             <Route path="/revenue" element={<AdminRoute><Layout><Revenue /></Layout></AdminRoute>} />
             <Route path="/alerts" element={<AdminRoute><Layout><Alerts /></Layout></AdminRoute>} />
+            <Route path="/admin/spaces" element={<AdminRoute><Layout><ManageSpaces /></Layout></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><Layout><ManageUsers /></Layout></AdminRoute>} />
+            <Route path="/admin/cameras" element={<AdminRoute><Layout><Cameras /></Layout></AdminRoute>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -3,12 +3,15 @@ import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 
 const adminNavItems = [
-  { path: "/dashboard", label: "Dashboard", icon: "\u2B21" },
-  { path: "/",          label: "Spaces",    icon: "\u25EB" },
-  { path: "/bookings",  label: "Bookings",  icon: "\u25F7" },
-  { path: "/analytics", label: "Analytics", icon: "\u25C8" },
-  { path: "/revenue",   label: "Revenue",   icon: "\u25CE" },
-  { path: "/alerts",    label: "Alerts",    icon: "\u25EC" },
+  { path: "/dashboard",      label: "Dashboard",      icon: "\u2B21" },
+  { path: "/",               label: "Spaces",          icon: "\u25EB" },
+  { path: "/bookings",       label: "Bookings",        icon: "\u25F7" },
+  { path: "/analytics",      label: "Analytics",       icon: "\u25C8" },
+  { path: "/revenue",        label: "Revenue",         icon: "\u25CE" },
+  { path: "/alerts",         label: "Alerts",          icon: "\u25EC" },
+  { path: "/admin/spaces",   label: "Manage Spaces",   icon: "\u2692" },
+  { path: "/admin/users",    label: "Manage Users",    icon: "\u2603" },
+  { path: "/admin/cameras",  label: "Cameras",         icon: "\u25CE" },
 ];
 
 const studentNavItems = [
@@ -43,7 +46,7 @@ export default function Sidebar({ alertCount = 0 }) {
         className="flex items-center gap-2.5 px-4"
         style={{ borderBottom: "1px solid var(--border)", height: 56, flexShrink: 0 }}
       >
-        <span style={{ fontSize: 20 }}>&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</span>
+        <img src="/PirateFlow.png" alt="PirateFlow" style={{ width: 28, height: 28, objectFit: "contain" }} />
         {!collapsed && (
           <span
             style={{
