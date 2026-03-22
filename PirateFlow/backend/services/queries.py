@@ -5,6 +5,7 @@ Encapsulates common SQL queries so routers don't write raw SQL.
 All functions take a db connection (from get_db()) as first arg.
 """
 
+import uuid
 from datetime import datetime, timedelta
 
 
@@ -618,5 +619,489 @@ async def update_room_occupancy(db, room_id: str, headcount: int):
     await db.execute(
         "UPDATE room_occupancy SET headcount = ?, last_updated = ? WHERE room_id = ?",
         (headcount, now, room_id),
+    )
+    await db.commit()
+
+
+# ===================================================================
+# BUILDING CRUD
+# ===================================================================
+
+async def create_building(db, name, code, address=None, total_floors=1,
+                          latitude=None, longitude=None):
+    """Insert a new building and return its ID."""
+    building_id = f"bld_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    await db.execute(
+        "INSERT INTO buildings VALUES (?,?,?,?,?,?,?,?)",
+        (building_id, name, code, address, total_floors, latitude, longitude, now),
+    )
+    await db.commit()
+    return building_id
+
+
+async def update_building(db, building_id, **updates):
+    """Update building fields. Only non-None values are updated."""
+    allowed = {"name", "code", "address", "total_floors", "latitude", "longitude"}
+    sets = []
+    params = []
+    for k, v in updates.items():
+        if k in allowed and v is not None:
+            sets.append(f"{k} = ?")
+            params.append(v)
+    if not sets:
+        return
+    params.append(building_id)
+    await db.execute(f"UPDATE buildings SET {', '.join(sets)} WHERE id = ?", params)
+    await db.commit()
+
+
+async def delete_building(db, building_id):
+    """Delete building and cascade to floors, rooms, equipment, occupancy."""
+    # Get all rooms in this building for cleanup
+    cursor = await db.execute("""
+        SELECT r.id FROM rooms r JOIN floors f ON r.floor_id = f.id
+        WHERE f.building_id = ?
+    """, (building_id,))
+    room_ids = [r["id"] for r in await cursor.fetchall()]
+
+    for rid in room_ids:
+        await db.execute("DELETE FROM room_equipment WHERE room_id = ?", (rid,))
+        await db.execute("DELETE FROM room_occupancy WHERE room_id = ?", (rid,))
+        await db.execute("DELETE FROM cameras WHERE room_id = ?", (rid,))
+
+    cursor = await db.execute("SELECT id FROM floors WHERE building_id = ?", (building_id,))
+    floor_ids = [r["id"] for r in await cursor.fetchall()]
+    for fid in floor_ids:
+        await db.execute("DELETE FROM rooms WHERE floor_id = ?", (fid,))
+
+    await db.execute("DELETE FROM floors WHERE building_id = ?", (building_id,))
+    await db.execute("DELETE FROM access_rules WHERE building_id = ?", (building_id,))
+    await db.execute("DELETE FROM buildings WHERE id = ?", (building_id,))
+    await db.commit()
+
+
+# ===================================================================
+# FLOOR CRUD
+# ===================================================================
+
+async def create_floor(db, building_id, floor_number, name):
+    """Insert a new floor and return its ID."""
+    floor_id = f"flr_{uuid.uuid4().hex[:8]}"
+    await db.execute(
+        "INSERT INTO floors VALUES (?,?,?,?)",
+        (floor_id, building_id, floor_number, name),
+    )
+    await db.commit()
+    return floor_id
+
+
+async def delete_floor(db, floor_id):
+    """Delete a floor and its rooms."""
+    cursor = await db.execute("SELECT id FROM rooms WHERE floor_id = ?", (floor_id,))
+    room_ids = [r["id"] for r in await cursor.fetchall()]
+    for rid in room_ids:
+        await db.execute("DELETE FROM room_equipment WHERE room_id = ?", (rid,))
+        await db.execute("DELETE FROM room_occupancy WHERE room_id = ?", (rid,))
+        await db.execute("DELETE FROM cameras WHERE room_id = ?", (rid,))
+    await db.execute("DELETE FROM rooms WHERE floor_id = ?", (floor_id,))
+    await db.execute("DELETE FROM floors WHERE id = ?", (floor_id,))
+    await db.commit()
+
+
+# ===================================================================
+# ROOM CRUD
+# ===================================================================
+
+async def create_room(db, floor_id, name, room_type, capacity,
+                      hourly_rate=None, is_bookable=True, description=None,
+                      equipment=None):
+    """Insert a new room with equipment and occupancy tracking."""
+    room_id = f"rm_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    await db.execute(
+        "INSERT INTO rooms VALUES (?,?,?,?,?,?,?,?,?)",
+        (room_id, floor_id, name, room_type, capacity,
+         "available", hourly_rate, int(is_bookable), description),
+    )
+    # Add equipment
+    if equipment:
+        for equip_type in equipment:
+            eid = f"eq_{uuid.uuid4().hex[:8]}"
+            await db.execute(
+                "INSERT INTO room_equipment VALUES (?,?,?)",
+                (eid, room_id, equip_type),
+            )
+    # Initialize occupancy tracking
+    await db.execute(
+        "INSERT INTO room_occupancy VALUES (?,0,?)",
+        (room_id, now),
+    )
+    await db.commit()
+    return room_id
+
+
+async def update_room(db, room_id, **updates):
+    """Update room fields. Handles equipment separately."""
+    equipment = updates.pop("equipment", None)
+
+    allowed = {"name", "room_type", "capacity", "hourly_rate", "is_bookable",
+               "status", "description"}
+    sets = []
+    params = []
+    for k, v in updates.items():
+        if k in allowed and v is not None:
+            if k == "is_bookable":
+                v = int(v)
+            sets.append(f"{k} = ?")
+            params.append(v)
+    if sets:
+        params.append(room_id)
+        await db.execute(f"UPDATE rooms SET {', '.join(sets)} WHERE id = ?", params)
+
+    if equipment is not None:
+        await set_room_equipment(db, room_id, equipment)
+
+    await db.commit()
+
+
+async def set_room_equipment(db, room_id, equipment_list):
+    """Replace all equipment for a room."""
+    await db.execute("DELETE FROM room_equipment WHERE room_id = ?", (room_id,))
+    for equip_type in equipment_list:
+        eid = f"eq_{uuid.uuid4().hex[:8]}"
+        await db.execute(
+            "INSERT INTO room_equipment VALUES (?,?,?)",
+            (eid, room_id, equip_type),
+        )
+
+
+async def delete_room(db, room_id):
+    """Delete a room and related data."""
+    await db.execute("DELETE FROM room_equipment WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM room_occupancy WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM cameras WHERE room_id = ?", (room_id,))
+    await db.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
+    await db.commit()
+
+
+# ===================================================================
+# USER CRUD
+# ===================================================================
+
+async def get_all_users(db, role=None, search=None, page=1, page_size=20):
+    """Return paginated users with optional role filter."""
+    conditions = []
+    params = []
+    if role:
+        conditions.append("role = ?")
+        params.append(role)
+    if search:
+        conditions.append("(email LIKE ? OR first_name LIKE ? OR last_name LIKE ?)")
+        params.extend([f"%{search}%"] * 3)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    cursor = await db.execute(f"SELECT COUNT(*) FROM users {where}", params)
+    total = (await cursor.fetchone())[0]
+
+    offset = (page - 1) * page_size
+    cursor = await db.execute(
+        f"SELECT id, email, first_name, last_name, role, department, major, year, student_id "
+        f"FROM users {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        params + [page_size, offset],
+    )
+    rows = await cursor.fetchall()
+    return {"items": [dict(r) for r in rows], "total": total, "page": page, "page_size": page_size}
+
+
+async def create_user(db, email, password_hash, first_name, last_name, role="student",
+                      department=None, major=None, year=None, student_id=None):
+    """Insert a new user and return their ID."""
+    user_id = f"usr_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    await db.execute(
+        "INSERT INTO users VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (user_id, email, password_hash, first_name, last_name, role,
+         department, major, year, student_id, now),
+    )
+    await db.commit()
+    return user_id
+
+
+async def update_user(db, user_id, **updates):
+    """Update user fields."""
+    allowed = {"email", "first_name", "last_name", "role", "department",
+               "major", "year", "student_id"}
+    sets = []
+    params = []
+    for k, v in updates.items():
+        if k in allowed and v is not None:
+            sets.append(f"{k} = ?")
+            params.append(v)
+    if not sets:
+        return
+    params.append(user_id)
+    await db.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
+    await db.commit()
+
+
+async def delete_user(db, user_id):
+    """Delete a user."""
+    await db.execute("DELETE FROM enrolled_faces WHERE user_id = ?", (user_id,))
+    await db.execute("DELETE FROM club_members WHERE user_id = ?", (user_id,))
+    await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    await db.commit()
+
+
+# ===================================================================
+# CAMERAS
+# ===================================================================
+
+async def create_camera(db, room_id, name, rtsp_url=None,
+                        doorway_polygon=None, room_direction=None,
+                        entry_direction="top_to_bottom", **kwargs):
+    """Insert a new camera and return its ID."""
+    import json as _json
+    camera_id = f"cam_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    poly_json = _json.dumps(doorway_polygon) if doorway_polygon else None
+    dir_json = _json.dumps(room_direction) if room_direction else None
+    await db.execute(
+        "INSERT INTO cameras VALUES (?,?,?,?,?,?,?,?,?)",
+        (camera_id, room_id, name, "online", now, rtsp_url,
+         poly_json, dir_json, entry_direction),
+    )
+    await db.commit()
+    return camera_id
+
+
+def _parse_camera_row(row):
+    """Parse a camera DB row, deserializing JSON fields."""
+    import json as _json
+    d = dict(row)
+    if d.get("doorway_polygon") and isinstance(d["doorway_polygon"], str):
+        try:
+            d["doorway_polygon"] = _json.loads(d["doorway_polygon"])
+        except Exception:
+            d["doorway_polygon"] = None
+    if d.get("room_direction") and isinstance(d["room_direction"], str):
+        try:
+            d["room_direction"] = _json.loads(d["room_direction"])
+        except Exception:
+            d["room_direction"] = None
+    return d
+
+
+async def get_cameras(db, room_id=None):
+    """Return all cameras with room/building names."""
+    conditions = []
+    params = []
+    if room_id:
+        conditions.append("c.room_id = ?")
+        params.append(room_id)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    cursor = await db.execute(f"""
+        SELECT c.*, r.name AS room_name, b.name AS building_name
+        FROM cameras c
+        JOIN rooms r ON c.room_id = r.id
+        JOIN floors f ON r.floor_id = f.id
+        JOIN buildings b ON f.building_id = b.id
+        {where}
+        ORDER BY c.name
+    """, params)
+    return [_parse_camera_row(r) for r in await cursor.fetchall()]
+
+
+async def get_camera_by_id(db, camera_id):
+    """Return a single camera with room/building names."""
+    cursor = await db.execute("""
+        SELECT c.*, r.name AS room_name, b.name AS building_name
+        FROM cameras c
+        JOIN rooms r ON c.room_id = r.id
+        JOIN floors f ON r.floor_id = f.id
+        JOIN buildings b ON f.building_id = b.id
+        WHERE c.id = ?
+    """, (camera_id,))
+    row = await cursor.fetchone()
+    return _parse_camera_row(row) if row else None
+
+
+async def update_camera(db, camera_id, **updates):
+    """Update camera fields."""
+    import json as _json
+    # Serialize polygon/direction fields to JSON strings
+    if "doorway_polygon" in updates and updates["doorway_polygon"] is not None:
+        updates["doorway_polygon"] = _json.dumps(updates["doorway_polygon"])
+    if "room_direction" in updates and updates["room_direction"] is not None:
+        updates["room_direction"] = _json.dumps(updates["room_direction"])
+    allowed = {"name", "rtsp_url", "status", "doorway_polygon", "room_direction", "entry_direction"}
+    sets = []
+    params = []
+    for k, v in updates.items():
+        if k in allowed and v is not None:
+            sets.append(f"{k} = ?")
+            params.append(v)
+    if not sets:
+        return
+    params.append(camera_id)
+    await db.execute(f"UPDATE cameras SET {', '.join(sets)} WHERE id = ?", params)
+    await db.commit()
+
+
+async def delete_camera(db, camera_id):
+    """Delete a camera."""
+    await db.execute("DELETE FROM cameras WHERE id = ?", (camera_id,))
+    await db.commit()
+
+
+# ===================================================================
+# ACCESS RULES
+# ===================================================================
+
+async def create_access_rule(db, role=None, user_id=None, room_id=None,
+                              building_id=None, day_of_week=None,
+                              start_hour=0, end_hour=23):
+    """Insert a new access rule and return its ID."""
+    rule_id = f"ar_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    await db.execute(
+        "INSERT INTO access_rules VALUES (?,?,?,?,?,?,?,?,?)",
+        (rule_id, user_id, role, room_id, building_id, day_of_week,
+         start_hour, end_hour, now),
+    )
+    await db.commit()
+    return rule_id
+
+
+async def get_access_rules(db, building_id=None, room_id=None):
+    """Return all access rules with optional filtering."""
+    conditions = []
+    params = []
+    if building_id:
+        conditions.append("building_id = ?")
+        params.append(building_id)
+    if room_id:
+        conditions.append("room_id = ?")
+        params.append(room_id)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    cursor = await db.execute(
+        f"SELECT * FROM access_rules {where} ORDER BY created_at DESC", params
+    )
+    return [dict(r) for r in await cursor.fetchall()]
+
+
+async def delete_access_rule(db, rule_id):
+    """Delete an access rule."""
+    await db.execute("DELETE FROM access_rules WHERE id = ?", (rule_id,))
+    await db.commit()
+
+
+async def check_access_rules(db, user_id, user_role, room_id, building_id=None):
+    """Check if a user is authorized by access rules (not booking-based)."""
+    now = datetime.utcnow()
+    current_hour = now.hour
+    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    current_day = day_names[now.weekday()]
+
+    cursor = await db.execute("""
+        SELECT * FROM access_rules
+        WHERE (user_id = ? OR user_id IS NULL)
+          AND (role = ? OR role IS NULL)
+          AND (room_id = ? OR room_id IS NULL)
+          AND (building_id = ? OR building_id IS NULL)
+          AND start_hour <= ? AND end_hour >= ?
+    """, (user_id, user_role, room_id, building_id, current_hour, current_hour))
+    rules = await cursor.fetchall()
+
+    for rule in rules:
+        if rule["day_of_week"] is None or current_day in rule["day_of_week"].lower():
+            return True
+    return False
+
+
+# ===================================================================
+# ACCESS EVENTS & ALERTS
+# ===================================================================
+
+async def insert_access_event(db, camera_id, room_id, user_id, direction,
+                               authorized, confidence=None):
+    """Insert an access event and return its ID."""
+    event_id = f"evt_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    await db.execute(
+        "INSERT INTO access_events VALUES (?,?,?,?,?,?,?,?)",
+        (event_id, camera_id, room_id, user_id, direction,
+         int(authorized), confidence, now),
+    )
+    await db.commit()
+    return event_id
+
+
+async def get_camera_events(db, camera_id=None, room_id=None, limit=50):
+    """Return recent access events with user names."""
+    conditions = []
+    params = []
+    if camera_id:
+        conditions.append("ae.camera_id = ?")
+        params.append(camera_id)
+    if room_id:
+        conditions.append("ae.room_id = ?")
+        params.append(room_id)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    cursor = await db.execute(f"""
+        SELECT ae.*, u.first_name || ' ' || u.last_name AS user_name
+        FROM access_events ae
+        LEFT JOIN users u ON ae.user_id = u.id
+        {where}
+        ORDER BY ae.timestamp DESC
+        LIMIT ?
+    """, params + [limit])
+    return [dict(r) for r in await cursor.fetchall()]
+
+
+async def insert_alert(db, event_id, room_id, user_id, alert_type,
+                        severity, description):
+    """Insert an alert and return its ID."""
+    alert_id = f"alt_{uuid.uuid4().hex[:8]}"
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    await db.execute(
+        "INSERT INTO alerts VALUES (?,?,?,?,?,?,?,?,?)",
+        (alert_id, event_id, room_id, user_id, alert_type, severity,
+         description, 0, now),
+    )
+    await db.commit()
+    return alert_id
+
+
+async def get_alerts(db, acknowledged=None, severity=None, room_id=None, limit=50):
+    """Return recent alerts."""
+    conditions = []
+    params = []
+    if acknowledged is not None:
+        conditions.append("acknowledged = ?")
+        params.append(int(acknowledged))
+    if severity:
+        conditions.append("severity = ?")
+        params.append(severity)
+    if room_id:
+        conditions.append("room_id = ?")
+        params.append(room_id)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    cursor = await db.execute(
+        f"SELECT * FROM alerts {where} ORDER BY created_at DESC LIMIT ?",
+        params + [limit],
+    )
+    return [dict(r) for r in await cursor.fetchall()]
+
+
+async def acknowledge_alert(db, alert_id):
+    """Mark an alert as acknowledged."""
+    await db.execute(
+        "UPDATE alerts SET acknowledged = 1 WHERE id = ?", (alert_id,)
     )
     await db.commit()

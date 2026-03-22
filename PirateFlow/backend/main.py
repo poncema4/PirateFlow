@@ -2,6 +2,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -10,27 +11,66 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from middleware.errors import install_error_handlers
-from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access
+from middleware.logging_webhook import install_webhook_logging, send_discord, COLOR_GREEN, COLOR_RED
+from routers import auth, buildings, rooms, bookings, analytics, ai, websocket, demo, face_access, users, cameras, events
 
 load_dotenv()
 
 START_TIME = time.time()
 
-# The built React frontend lives here after `npm run build` in frontend/
 STATIC_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize DB, seed data
     from services.database import init_db, close_db
     from services.seed import seed_database
 
     print("PirateFlow API starting up...")
     await init_db()
     await seed_database()
+
+    # Load enrolled faces from DB for face recognition
+    try:
+        from services.face_service import load_enrolled_faces
+        await load_enrolled_faces()
+    except Exception as e:
+        print(f"Face loading skipped: {e}")
+
+    # Start scheduled campus events scraper (runs every 2 hours)
+    try:
+        from services.events_scraper import start_scheduled_scraper
+        await start_scheduled_scraper(interval_hours=2.0)
+    except Exception as e:
+        print(f"Events scraper skipped: {e}")
+
+    # Notify Discord on startup
+    await send_discord(
+        title="🚀 PirateFlow Server Started",
+        description="Backend is online and ready.",
+        color=COLOR_GREEN,
+        fields=[
+            {"name": "Repo", "value": f"`poncema4/PirateFlow`", "inline": True},
+            {"name": "Time", "value": f"`{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}`", "inline": True},
+        ],
+    )
+
     yield
-    # Shutdown
+
+    # Notify Discord on shutdown
+    await send_discord(
+        title="🔴 PirateFlow Server Stopped",
+        description="Backend has shut down.",
+        color=COLOR_RED,
+        fields=[
+            {"name": "Time", "value": f"`{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}`", "inline": True},
+        ],
+    )
+    try:
+        from services.events_scraper import stop_scheduled_scraper
+        await stop_scheduled_scraper()
+    except Exception:
+        pass
     await close_db()
     print("PirateFlow API shutting down...")
 
@@ -55,6 +95,9 @@ app.add_middleware(
 # --- Error Handlers ---
 install_error_handlers(app)
 
+# --- Webhook Logging Middleware ---
+install_webhook_logging(app)
+
 # --- Register Routers ---
 app.include_router(auth.router)
 app.include_router(buildings.router)
@@ -65,6 +108,9 @@ app.include_router(ai.router)
 app.include_router(websocket.router)
 app.include_router(demo.router)
 app.include_router(face_access.router)
+app.include_router(users.router)
+app.include_router(cameras.router)
+app.include_router(events.router)
 
 
 # --- Health Check ---
@@ -81,23 +127,16 @@ async def health_check():
 
 
 # --- Serve React Frontend (production) ---
-# Mount static assets if the build directory exists
 if STATIC_DIR.exists():
-    # Vite outputs hashed assets to dist/assets/ — serve with long cache
     assets_dir = STATIC_DIR / "assets"
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{path:path}")
     async def serve_frontend(path: str):
-        """Catch-all: serve static files or index.html for client-side routing."""
-        # Prevent path traversal — resolve and verify it stays inside STATIC_DIR
         file_path = (STATIC_DIR / path).resolve()
         if not str(file_path).startswith(str(STATIC_DIR.resolve())):
             return FileResponse(STATIC_DIR / "index.html")
-
         if file_path.is_file():
             return FileResponse(file_path)
-
-        # All non-file routes serve index.html (React Router handles them)
         return FileResponse(STATIC_DIR / "index.html")

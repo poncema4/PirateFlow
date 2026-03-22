@@ -1,67 +1,31 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useState, createContext, useContext } from "react";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { WebSocketProvider } from "./context/WebSocketContext";
-import { tokenStorage } from "./api/client";
-import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
-import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";
-import Revenue from "./pages/Revenue";
-import Alerts from "./pages/Alerts";
-import Login from "./pages/Login";
-import Spaces from "./pages/Spaces";
-import BuildingDetail from "./pages/BuildingDetail";
-import RoomDetail from "./pages/RoomDetail";
-import CreateBooking from "./pages/CreateBooking";
-import MyBookings from "./pages/MyBookings";
+import Sidebar from "./components/common/Sidebar";
+import Header from "./components/common/Header";
+import Landing from "./pages/public/Landing";
+import Login from "./pages/public/Login";
+import Dashboard from "./pages/admin/Dashboard";
+import Analytics from "./pages/admin/Analytics";
+import Revenue from "./pages/admin/Revenue";
+import Alerts from "./pages/admin/Alerts";
+import ManageSpaces from "./pages/admin/ManageSpaces";
+import ManageUsers from "./pages/admin/ManageUsers";
+import Cameras from "./pages/admin/Cameras";
+import BuildingDetail from "./pages/spaces/BuildingDetail";
+import CreateBooking from "./pages/bookings/CreateBooking";
+import MyBookings from "./pages/bookings/MyBookings";
 
-// ─── Auth Context ─────────────────────────────────────────────────────────────
-export const AuthContext = createContext(null);
+// Re-export for any legacy imports
+export { useAuth } from "./hooks/useAuth";
+export { AuthContext } from "./hooks/useAuth";
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("pf_user");
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  // userData: { id?, email, first_name?, last_name?, role, name? }
-  // tokens:   { access_token, refresh_token } (optional — omit for temp/stub login)
-  const login = (userData, tokens) => {
-    // Normalize: ensure `name` field exists for Sidebar/Header display
-    const normalized = {
-      ...userData,
-      name: userData.name ?? (`${userData.first_name ?? ""} ${userData.last_name ?? ""}`.trim() || userData.email),
-    };
-    if (tokens) tokenStorage.set(tokens.access_token, tokens.refresh_token);
-    localStorage.setItem("pf_user", JSON.stringify(normalized));
-    setUser(normalized);
-  };
-
-  const logout = () => {
-    tokenStorage.clear();
-    setUser(null);
-  };
-
-  const isAuthenticated = !!user;
-  const isAdmin = user?.role === "admin";
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-// ─── Route Guards ─────────────────────────────────────────────────────────────
+// ─── Route Guards ────────────────────────────────────────────────────────────
 function AdminRoute({ children }) {
   const { user } = useAuth();
   const location = useLocation();
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
-  if (user.role !== "admin") return <Navigate to="/spaces" replace />;
+  if (user.role !== "admin") return <Navigate to="/" replace />;
   return children;
 }
 
@@ -72,8 +36,7 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-
-// ─── Layout ───────────────────────────────────────────────────────────────────
+// ─── Layout ──────────────────────────────────────────────────────────────────
 function Layout({ children, alertCount }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", overflow: "hidden" }}>
@@ -88,72 +51,38 @@ function Layout({ children, alertCount }) {
   );
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
+// ─── App ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [alertCount] = useState(3);
-
   return (
     <AuthProvider>
       <WebSocketProvider>
         <BrowserRouter>
           <Routes>
             {/* Public */}
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/spaces/:buildingId" element={<Layout><BuildingDetail /></Layout>} />
+            <Route path="/spaces" element={<Navigate to="/" replace />} />
 
-            {/* Admin-only */}
-            <Route path="/dashboard" element={
-              <AdminRoute>
-                <Layout alertCount={alertCount}><Dashboard /></Layout>
-              </AdminRoute>
-            } />
-            <Route path="/analytics" element={
-              <AdminRoute>
-                <Layout alertCount={alertCount}><Analytics /></Layout>
-              </AdminRoute>
-            } />
-            <Route path="/revenue" element={
-              <AdminRoute>
-                <Layout alertCount={alertCount}><Revenue /></Layout>
-              </AdminRoute>
-            } />
-            <Route path="/alerts" element={
-              <AdminRoute>
-                <Layout alertCount={alertCount}><Alerts /></Layout>
-              </AdminRoute>
-            } />
-
-            {/* ── Role 4: Student + Staff routes ─────────────────────────── */}
-            <Route path="/spaces" element={
-              <ProtectedRoute>
-                <Layout alertCount={alertCount}><Spaces /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/spaces/:buildingId" element={
-              <ProtectedRoute>
-                <Layout alertCount={alertCount}><BuildingDetail /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/spaces/:buildingId/:roomId" element={
-              <ProtectedRoute>
-                <Layout alertCount={alertCount}><RoomDetail /></Layout>
-              </ProtectedRoute>
-            } />
+            {/* Protected */}
             <Route path="/bookings/new" element={
-              <ProtectedRoute>
-                <Layout alertCount={alertCount}><CreateBooking /></Layout>
-              </ProtectedRoute>
+              <ProtectedRoute><Layout><CreateBooking /></Layout></ProtectedRoute>
             } />
             <Route path="/bookings" element={
-              <ProtectedRoute>
-                <Layout alertCount={alertCount}><MyBookings /></Layout>
-              </ProtectedRoute>
+              <ProtectedRoute><Layout><MyBookings /></Layout></ProtectedRoute>
             } />
 
-            {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Admin */}
+            <Route path="/dashboard" element={<AdminRoute><Layout><Dashboard /></Layout></AdminRoute>} />
+            <Route path="/analytics" element={<AdminRoute><Layout><Analytics /></Layout></AdminRoute>} />
+            <Route path="/revenue" element={<AdminRoute><Layout><Revenue /></Layout></AdminRoute>} />
+            <Route path="/alerts" element={<AdminRoute><Layout><Alerts /></Layout></AdminRoute>} />
+            <Route path="/admin/spaces" element={<AdminRoute><Layout><ManageSpaces /></Layout></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><Layout><ManageUsers /></Layout></AdminRoute>} />
+            <Route path="/admin/cameras" element={<AdminRoute><Layout><Cameras /></Layout></AdminRoute>} />
 
             {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </WebSocketProvider>

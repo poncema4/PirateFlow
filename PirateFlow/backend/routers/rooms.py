@@ -1,16 +1,20 @@
-"""Room endpoints — list, detail, filter, availability."""
+"""Room endpoints — list, detail, filter, availability, and admin CRUD."""
 
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from middleware.auth import get_current_user
+from middleware.auth import UserPayload, get_current_user, require_role
 from models.schemas import (
     BookingOut, BookingStatus, BookingType,
-    PaginatedResponse, RoomOut, RoomStatus, RoomSummaryOut, RoomType, TimeSlot,
+    PaginatedResponse, RoomCreateRequest, RoomOut, RoomStatus, RoomSummaryOut,
+    RoomType, RoomUpdateRequest, TimeSlot, UserRole,
 )
 from services.database import get_db
-from services.queries import get_rooms_filtered, get_room_by_id, get_room_availability
+from services.queries import (
+    get_rooms_filtered, get_room_by_id, get_room_availability,
+    create_room, update_room, delete_room,
+)
 
 router = APIRouter(prefix="/api/rooms", tags=["rooms"], dependencies=[Depends(get_current_user)])
 
@@ -90,3 +94,57 @@ async def room_availability(room_id: str, date: str = "2026-03-21"):
     db = await get_db()
     slots = await get_room_availability(db, room_id, date)
     return [TimeSlot(**s) for s in slots]
+
+
+# ---------------------------------------------------------------------------
+# Admin CRUD
+# ---------------------------------------------------------------------------
+
+@router.post("", response_model=dict, status_code=201)
+async def create_room_endpoint(
+    body: RoomCreateRequest,
+    admin: UserPayload = Depends(require_role(UserRole.admin)),
+):
+    """Admin: create a new room."""
+    db = await get_db()
+    room_id = await create_room(
+        db, floor_id=body.floor_id, name=body.name,
+        room_type=body.room_type.value, capacity=body.capacity,
+        hourly_rate=body.hourly_rate, is_bookable=body.is_bookable,
+        description=body.description, equipment=body.equipment,
+    )
+    return {"id": room_id, "status": "created"}
+
+
+@router.put("/{room_id}", response_model=dict)
+async def update_room_endpoint(
+    room_id: str,
+    body: RoomUpdateRequest,
+    admin: UserPayload = Depends(require_role(UserRole.admin)),
+):
+    """Admin: update a room."""
+    db = await get_db()
+    existing = await get_room_by_id(db, room_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Room not found")
+    updates = body.model_dump(exclude_none=True)
+    if "room_type" in updates:
+        updates["room_type"] = updates["room_type"].value
+    if "status" in updates:
+        updates["status"] = updates["status"].value
+    await update_room(db, room_id, **updates)
+    return {"id": room_id, "status": "updated"}
+
+
+@router.delete("/{room_id}", response_model=dict)
+async def delete_room_endpoint(
+    room_id: str,
+    admin: UserPayload = Depends(require_role(UserRole.admin)),
+):
+    """Admin: delete a room."""
+    db = await get_db()
+    existing = await get_room_by_id(db, room_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Room not found")
+    await delete_room(db, room_id)
+    return {"id": room_id, "status": "deleted"}

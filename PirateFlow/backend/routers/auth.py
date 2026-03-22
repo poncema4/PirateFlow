@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from middleware.auth import UserPayload, get_current_user
 from middleware.rate_limit import rate_limit_ip
-from models.schemas import LoginRequest, LoginResponse, RefreshRequest, TokenPair, UserOut, UserRole
+from models.schemas import LoginRequest, LoginResponse, RefreshRequest, StudentLookupRequest, TokenPair, UserOut, UserRole
 from services.auth import verify_password, create_access_token, create_refresh_token, decode_refresh_token
 from services.database import get_db
 
@@ -23,6 +23,38 @@ async def login(body: LoginRequest, _: None = Depends(rate_limit_ip(max_requests
 
     if not row or not verify_password(body.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    access = create_access_token(row["id"], row["email"], row["role"])
+    refresh = create_refresh_token(row["id"])
+
+    return LoginResponse(
+        access_token=access,
+        refresh_token=refresh,
+        user=UserOut(
+            id=row["id"],
+            email=row["email"],
+            first_name=row["first_name"],
+            last_name=row["last_name"],
+            role=UserRole(row["role"]),
+            department=row["department"],
+            major=row["major"],
+            year=row["year"],
+            student_id=row["student_id"],
+        ),
+    )
+
+
+@router.post("/lookup", response_model=LoginResponse)
+async def student_lookup(body: StudentLookupRequest, _: None = Depends(rate_limit_ip(max_requests=10, window_seconds=60))):
+    """Look up a student by their SHU ID number and log them in."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE student_id = ?",
+        (body.student_id.strip(),),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="No student found with that ID number")
 
     access = create_access_token(row["id"], row["email"], row["role"])
     refresh = create_refresh_token(row["id"])
