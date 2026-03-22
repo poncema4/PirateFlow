@@ -67,7 +67,7 @@ apiClient.interceptors.response.use(
         refreshQueue.forEach(({ reject }) => reject(error));
         refreshQueue = [];
         tokenStorage.clear();
-        window.location.href = "/login";
+        // Don't force redirect — let route guards handle it
         return Promise.reject(error);
       } finally {
         isRefreshing = false;
@@ -84,8 +84,8 @@ export const api = {
   login: (email, password) =>
     apiClient.post("/auth/login", { email, password }).then((r) => r.data),
 
-  studentLookup: (studentId) =>
-    apiClient.post("/auth/lookup", { student_id: studentId }).then((r) => r.data),
+  studentLookup: (studentId, password) =>
+    apiClient.post("/auth/lookup", { student_id: studentId, password }).then((r) => r.data),
 
   refreshToken: (refreshToken) =>
     apiClient.post("/auth/refresh", { refresh_token: refreshToken }).then((r) => r.data),

@@ -18,6 +18,9 @@ JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_HOURS = 24
 
+# Shared password for all users (hackathon demo)
+SHARED_PASSWORD = "shu2026"
+
 
 def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))

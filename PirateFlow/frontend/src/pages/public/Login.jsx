@@ -20,6 +20,8 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const [studentId, setStudentId] = useState("");
+  const [idPassword, setIdPassword] = useState("");
+  const [showIdPassword, setShowIdPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,15 +38,16 @@ export default function Login() {
 
   const handleIdLookup = async (e) => {
     e.preventDefault();
-    if (!studentId.trim()) return;
+    if (!studentId.trim() || !idPassword) return;
     setError("");
     setLoading(true);
     try {
-      const data = await api.studentLookup(studentId.trim());
+      const data = await api.studentLookup(studentId.trim(), idPassword);
       handleSuccess(data);
     } catch (err) {
       const status = err.response?.status;
-      if (status === 404) setError("No student found with that ID number.");
+      if (status === 401) setError("Invalid student ID or password.");
+      else if (status === 404) setError("No student found with that ID number.");
       else if (status === 429) setError("Too many attempts. Please wait a moment.");
       else setError("Something went wrong. Please try again.");
     } finally {
@@ -69,7 +72,7 @@ export default function Login() {
     }
   };
 
-  const idDisabled = loading || studentId.length < 7;
+  const idDisabled = loading || studentId.length < 8 || !idPassword;
 
   return (
     <div className="login-page">
@@ -88,7 +91,7 @@ export default function Login() {
           <div className="login-tabs">
             {[
               { key: "id", label: "Student ID" },
-              { key: "piratenet", label: "PirateNet Login" },
+              { key: "piratenet", label: "Pirate Email" },
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -114,14 +117,41 @@ export default function Login() {
                   autoComplete="off"
                   required
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value.replace(/\D/g, "").slice(0, 7))}
-                  placeholder="e.g. 9012345"
-                  maxLength={7}
+                  onChange={(e) => setStudentId(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  placeholder="e.g. 90123456"
+                  maxLength={8}
                   className="login-input"
                 />
                 <p className="login-hint">
-                  Enter your 7-digit student ID from your SHU card
+                  Enter your 8-digit student ID from your SHU card
                 </p>
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="id-password" className="login-label">
+                  Password
+                </label>
+                <div className="login-password-wrap">
+                  <input
+                    id="id-password"
+                    type={showIdPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    value={idPassword}
+                    onChange={(e) => setIdPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="login-input"
+                    style={{ paddingRight: 64 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowIdPassword((v) => !v)}
+                    tabIndex={-1}
+                    className="login-password-toggle"
+                  >
+                    {showIdPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -136,7 +166,7 @@ export default function Login() {
                 className="login-submit"
               >
                 {loading && <Spinner />}
-                {loading ? "Looking up..." : "Continue"}
+                {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
           )}
@@ -146,7 +176,7 @@ export default function Login() {
             <form onSubmit={handlePirateNet} className="login-form">
               <div className="login-field">
                 <label htmlFor="email" className="login-label">
-                  Email
+                  Pirate Email
                 </label>
                 <input
                   id="email"
@@ -155,7 +185,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@shu.edu"
+                  placeholder="firstname.lastname@shu.edu"
                   className="login-input"
                 />
               </div>
@@ -203,48 +233,6 @@ export default function Login() {
               </button>
             </form>
           )}
-
-          {/* Demo credentials */}
-          <div className="login-demo">
-            <p className="login-demo-title">
-              Demo Accounts
-            </p>
-            <div className="login-demo-list">
-              {tab === "id" ? (
-                [
-                  { label: "Student", id: "9012345" },
-                  { label: "Staff", id: "9067890" },
-                  { label: "Admin", id: "9078901" },
-                ].map(({ label, id }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setStudentId(id)}
-                    className="login-demo-btn"
-                  >
-                    <span className="login-demo-label">{label}</span>
-                    <span>{id}</span>
-                  </button>
-                ))
-              ) : (
-                [
-                  { label: "Admin", email: "admin@shu.edu" },
-                  { label: "Staff", email: "staff@shu.edu" },
-                  { label: "Student", email: "student@shu.edu" },
-                ].map(({ label, email: e }) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => { setEmail(e); setPassword("openshu2026"); }}
-                    className="login-demo-btn"
-                  >
-                    <span className="login-demo-label">{label}</span>
-                    <span>{e} &middot; openshu2026</span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
 
           {/* Back link */}
           <button

@@ -15,11 +15,33 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 async def login(body: LoginRequest, _: None = Depends(rate_limit_ip(max_requests=5, window_seconds=60))):
     """Authenticate user, return JWT token pair."""
     db = await get_db()
-    cursor = await db.execute(
-        "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE email = ?",
-        (body.email,),
-    )
-    row = await cursor.fetchone()
+
+    # If input is all digits, treat as student ID lookup
+    identifier = body.email.strip()
+    if identifier.isdigit():
+        cursor = await db.execute(
+            "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE student_id = ?",
+            (identifier,),
+        )
+        row = await cursor.fetchone()
+    else:
+        # Try exact email match first
+        cursor = await db.execute(
+            "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE email = ?",
+            (identifier,),
+        )
+        row = await cursor.fetchone()
+
+    # If no match and email is firstname.lastname@shu.edu, try matching by name
+    if not row and identifier.endswith("@shu.edu"):
+        name_part = identifier.split("@")[0]
+        if "." in name_part:
+            first, last = name_part.split(".", 1)
+            cursor = await db.execute(
+                "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE LOWER(first_name) = ? AND LOWER(last_name) = ?",
+                (first.lower(), last.lower()),
+            )
+            row = await cursor.fetchone()
 
     if not row or not verify_password(body.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -46,7 +68,7 @@ async def login(body: LoginRequest, _: None = Depends(rate_limit_ip(max_requests
 
 @router.post("/lookup", response_model=LoginResponse)
 async def student_lookup(body: StudentLookupRequest, _: None = Depends(rate_limit_ip(max_requests=10, window_seconds=60))):
-    """Look up a student by their SHU ID number and log them in."""
+    """Look up a student by their SHU ID number and verify password."""
     db = await get_db()
     cursor = await db.execute(
         "SELECT id, email, password_hash, first_name, last_name, role, department, major, year, student_id FROM users WHERE student_id = ?",
@@ -55,6 +77,9 @@ async def student_lookup(body: StudentLookupRequest, _: None = Depends(rate_limi
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="No student found with that ID number")
+
+    if not verify_password(body.password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
 
     access = create_access_token(row["id"], row["email"], row["role"])
     refresh = create_refresh_token(row["id"])
