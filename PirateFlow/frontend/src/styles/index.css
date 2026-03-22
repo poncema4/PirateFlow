@@ -464,6 +464,46 @@ a { color: inherit; text-decoration: none; }
 .login-back { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 4px; }
 .login-back:hover { color: var(--text); }
 
+/* ─── Face Recognition ────────────────────────────────────────────────── */
+.face-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.face-card { width: 100%; max-width: 480px; background: var(--card); border-radius: var(--radius-lg); padding: 32px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+.face-card-wide { max-width: 720px; }
+.face-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text); margin: 0; }
+.face-subtitle { font-size: 13px; color: var(--text-muted); margin: 0; }
+.face-options { display: flex; gap: 12px; }
+.face-option-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 16px; border: 2px dashed var(--border); border-radius: var(--radius-lg); background: var(--bg); cursor: pointer; transition: all 0.15s; font-size: 14px; font-weight: 600; color: var(--text); }
+.face-option-btn:hover { border-color: var(--accent); background: rgba(37,99,235,0.04); }
+.face-option-icon { font-size: 28px; }
+.face-option-hint { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+.face-webcam { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.face-video { width: 100%; max-width: 420px; border-radius: var(--radius); border: 2px solid var(--border); }
+.face-preview { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.face-preview-img { width: 100%; max-width: 320px; border-radius: var(--radius); border: 2px solid var(--border); }
+.face-actions { display: flex; gap: 8px; justify-content: center; }
+.face-error { font-size: 13px; color: var(--danger); background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.15); border-radius: var(--radius); padding: 8px 12px; margin: 0; }
+.face-result { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px; border-radius: var(--radius-lg); text-align: center; }
+.face-result.success { background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.2); }
+.face-result.denied { background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.15); }
+.face-result-icon { font-size: 36px; font-weight: 700; }
+.face-result.success .face-result-icon { color: #22c55e; }
+.face-result.denied .face-result-icon { color: var(--danger); }
+.face-result h3 { margin: 0; font-size: 18px; }
+.face-result.success h3 { color: #16a34a; }
+.face-result.denied h3 { color: var(--danger); }
+.face-result-details { text-align: left; font-size: 13px; color: var(--text); }
+.face-result-details p { margin: 4px 0; }
+.face-result-hint { font-size: 13px; color: var(--text-muted); }
+.face-alert-badge { font-size: 11px; color: var(--danger); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.face-field { display: flex; flex-direction: column; gap: 4px; }
+.face-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.face-select { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; }
+.face-select:focus { border-color: var(--accent); outline: none; }
+.face-verify-layout { display: flex; gap: 20px; }
+.face-webcam-section { flex: 1; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.face-result-panel { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.face-result-placeholder { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px; border: 1px dashed var(--border); border-radius: var(--radius); }
+@media (max-width: 640px) { .face-verify-layout { flex-direction: column; } .face-options { flex-direction: column; } }
+
 /* ─── Dashboard ───────────────────────────────────────────────────────── */
 .dashboard { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
 .welcome-banner {

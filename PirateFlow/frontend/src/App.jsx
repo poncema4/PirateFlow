@@ -17,6 +17,8 @@ import Cameras from "./pages/admin/Cameras";
 import BuildingDetail from "./pages/spaces/BuildingDetail";
 import CreateBooking from "./pages/bookings/CreateBooking";
 import MyBookings from "./pages/bookings/MyBookings";
+import FaceRegister from "./pages/public/FaceRegister";
+import FaceVerify from "./pages/public/FaceVerify";
 
 // Re-export for any legacy imports
 export { useAuth } from "./hooks/useAuth";
@@ -99,6 +101,12 @@ export default function App() {
             } />
             <Route path="/bookings" element={
               <ProtectedRoute><BookingLayout><MyBookings /></BookingLayout></ProtectedRoute>
+            } />
+            <Route path="/face/register" element={
+              <ProtectedRoute><BookingLayout><FaceRegister /></BookingLayout></ProtectedRoute>
+            } />
+            <Route path="/face/verify" element={
+              <ProtectedRoute><BookingLayout><FaceVerify /></BookingLayout></ProtectedRoute>
             } />
 
             {/* Admin */}
