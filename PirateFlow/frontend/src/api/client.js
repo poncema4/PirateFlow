@@ -57,7 +57,10 @@ apiClient.interceptors.response.use(
  
       isRefreshing = true;
       try {
-        const { data } = await axios.post("/api/auth/refresh", {
+        const refreshUrl = import.meta.env.PROD
+          ? "https://api.pirateflow.net/api/auth/refresh"
+          : "/api/auth/refresh";
+        const { data } = await axios.post(refreshUrl, {
           refresh_token: refreshToken,
         });
         tokenStorage.set(data.access_token, null);
