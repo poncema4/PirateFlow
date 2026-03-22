@@ -16,44 +16,41 @@ const TYPE_COLORS = {
   multipurpose:    { bg: "#eef5f2", tag: "rgba(45,106,74,.1)", color: "#1d5c42" },
 };
 
-function RoomCard({ room, onBook }) {
+function RoomCard({ room, onClick, onBook }) {
   const tc = TYPE_COLORS[room.room_type] || TYPE_COLORS.classroom;
   const available = room.status === "available";
   const bookable = room.is_bookable && room.status !== "maintenance" && room.status !== "closed";
 
   return (
     <div
+      onClick={() => onClick(room)}
       style={{
         background: "#fff",
         border: "1px solid #ddd5c4",
         borderRadius: 14,
         overflow: "hidden",
-        cursor: bookable ? "pointer" : "default",
+        cursor: "pointer",
         transition: "all .22s cubic-bezier(.4,0,.2,1)",
         display: "flex",
         flexDirection: "column",
         animation: "fadeUp .4s ease both",
-        opacity: bookable ? 1 : 0.52,
+        opacity: bookable ? 1 : 0.6,
       }}
       onMouseEnter={(e) => {
-        if (bookable) {
-          e.currentTarget.style.transform = "translateY(-3px)";
-          e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,75,141,.14)";
-          e.currentTarget.style.borderColor = "#c0b09a";
-        }
+        e.currentTarget.style.transform = "translateY(-3px)";
+        e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,75,141,.14)";
+        e.currentTarget.style.borderColor = "#c0b09a";
       }}
       onMouseLeave={(e) => {
-        if (bookable) {
-          e.currentTarget.style.transform = "";
-          e.currentTarget.style.boxShadow = "none";
-          e.currentTarget.style.borderColor = "#ddd5c4";
-        }
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.boxShadow = "none";
+        e.currentTarget.style.borderColor = "#ddd5c4";
       }}
     >
       {/* Colored type header */}
       <div style={{
-        height: 72,
-        padding: "16px 18px",
+        height: 52,
+        padding: "12px 16px",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "space-between",
@@ -80,7 +77,7 @@ function RoomCard({ room, onBook }) {
       </div>
 
       {/* Body */}
-      <div style={{ padding: "16px 18px", flex: 1 }}>
+      <div style={{ padding: "12px 16px", flex: 1 }}>
         <p style={{
           fontSize: 10, textTransform: "uppercase", letterSpacing: ".1em",
           color: "#7a6a52", fontWeight: 500, marginBottom: 4,
@@ -116,7 +113,7 @@ function RoomCard({ room, onBook }) {
 
       {/* Footer */}
       <div style={{
-        padding: "12px 18px",
+        padding: "10px 16px",
         borderTop: "1px solid #ede8dc",
         display: "flex",
         alignItems: "center",
@@ -210,7 +207,7 @@ export default function Landing() {
     <div style={{ minHeight: "100vh", background: "#f8f4ec" }}>
       <TopBar />
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 32px" }}>
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 28px" }}>
         {/* Page header */}
         <div style={{
           display: "flex", alignItems: "flex-end",
@@ -331,6 +328,7 @@ export default function Landing() {
               <RoomCard
                 key={room.id}
                 room={room}
+                onClick={handleBook}
                 onBook={handleBook}
               />
             ))}
