@@ -65,6 +65,13 @@ function AdminLayout({ children, alertCount }) {
   );
 }
 
+// ─── Home: admin → dashboard, everyone else → landing ───────────────────────
+function Home() {
+  const { user } = useAuth();
+  if (user?.role === "admin") return <Navigate to="/dashboard" replace />;
+  return <Landing />;
+}
+
 // ─── App ─────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
@@ -73,7 +80,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {/* Public */}
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/events" element={<PublicLayout><Events /></PublicLayout>} />
             <Route path="/spaces/:buildingId" element={<PublicLayout><BuildingDetail /></PublicLayout>} />
