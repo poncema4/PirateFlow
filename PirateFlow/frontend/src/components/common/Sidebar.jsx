@@ -46,7 +46,7 @@ export default function Sidebar({ alertCount = 0 }) {
         className="flex items-center gap-2.5 px-4"
         style={{ borderBottom: "1px solid var(--border)", height: 56, flexShrink: 0 }}
       >
-        <span style={{ fontSize: 20 }}>&#x1F3F4;&#x200D;&#x2620;&#xFE0F;</span>
+        <img src="/PirateFlow.png" alt="PirateFlow" style={{ width: 28, height: 28, objectFit: "contain" }} />
         {!collapsed && (
           <span
             style={{
