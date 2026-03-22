@@ -3,61 +3,61 @@ import { api } from "../../api/client";
 
 function formatDate(isoStr) {
   const d = new Date(isoStr);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 function formatTime(isoStr) {
   const d = new Date(isoStr);
-  return d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function stripHtml(str) {
+  if (!str) return "";
+  return str.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#\d+;/g, "").replace(/\s+/g, " ").trim();
+}
+
+function getEventUrl(event) {
+  if (event.external_id) {
+    return `https://shu.campuslabs.com/engage/event/${event.external_id}`;
+  }
+  return null;
 }
 
 function EventCard({ event }) {
-  const hasImage = !!event.image_url;
+  const url = getEventUrl(event);
+  const desc = stripHtml(event.description);
 
-  return (
+  const card = (
     <div className="event-card">
-      {hasImage && (
-        <img
-          src={event.image_url}
-          alt={event.name}
-          className="event-card-img"
-        />
+      {event.image_url && (
+        <img src={event.image_url} alt={event.name} className="event-card-img" />
       )}
       <div className="event-card-body">
         <div className="event-card-date">
           {formatDate(event.starts_at)}
-          {event.ends_at && ` · ${formatTime(event.starts_at)} – ${formatTime(event.ends_at)}`}
-          {!event.ends_at && ` · ${formatTime(event.starts_at)}`}
+          {event.ends_at
+            ? ` · ${formatTime(event.starts_at)} – ${formatTime(event.ends_at)}`
+            : ` · ${formatTime(event.starts_at)}`}
         </div>
         <h3 className="event-card-name">{event.name}</h3>
-        {event.organization && (
-          <p className="event-card-org">{event.organization}</p>
-        )}
-        {event.location && (
-          <p className="event-card-location">{event.location}</p>
-        )}
-        {event.description && (
-          <p className="event-card-desc">{event.description}</p>
-        )}
+        {event.organization && <p className="event-card-org">{event.organization}</p>}
+        {event.location && <p className="event-card-location">{event.location}</p>}
+        {desc && <p className="event-card-desc">{desc}</p>}
         {event.category_names && (
           <div className="event-card-tags">
             {event.category_names.split(",").map((cat) => (
-              <span key={cat.trim()} className="event-card-tag">
-                {cat.trim()}
-              </span>
+              <span key={cat.trim()} className="event-card-tag">{cat.trim()}</span>
             ))}
           </div>
         )}
       </div>
     </div>
   );
+
+  if (url) {
+    return <a href={url} target="_blank" rel="noopener noreferrer" className="event-card-link">{card}</a>;
+  }
+  return card;
 }
 
 export default function Events() {
