@@ -9,13 +9,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': 'http://localhost:8000'
+      '/api': 'https://pirateflow.net'
     }
   },
   preview: {
     allowedHosts: ['pirateflow.net', 'www.pirateflow.net'],
     proxy: {
-      '/api': 'http://localhost:8000'
+      '/api': 'https://pirateflow.net'
     }
   }
 })

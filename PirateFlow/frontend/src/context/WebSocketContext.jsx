@@ -3,7 +3,9 @@ import { tokenStorage } from "../api/client";
 
 const WebSocketContext = createContext(null);
 
-const WS_URL = "ws://localhost:8000/ws";
+const WS_URL = import.meta.env.PROD
+  ? "wss://pirateflow.net/ws"
+  : "wss://pirateflow.net/ws";
 
 export function WebSocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
