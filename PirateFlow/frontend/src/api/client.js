@@ -93,12 +93,41 @@ export const api = {
   getMe: () =>
     apiClient.get("/auth/me").then((r) => r.data),
 
+  // Users
+  getUsers: (params = {}) =>
+    apiClient.get("/users", { params }).then((r) => r.data),
+
+  createUser: (body) =>
+    apiClient.post("/users", body).then((r) => r.data),
+
+  updateUser: (userId, body) =>
+    apiClient.put(`/users/${userId}`, body).then((r) => r.data),
+
+  deleteUser: (userId) =>
+    apiClient.delete(`/users/${userId}`).then((r) => r.data),
+
   // Buildings
   getBuildings: () =>
     apiClient.get("/buildings").then((r) => r.data),
 
   getBuilding: (buildingId) =>
     apiClient.get(`/buildings/${buildingId}`).then((r) => r.data),
+
+  createBuilding: (body) =>
+    apiClient.post("/buildings", body).then((r) => r.data),
+
+  updateBuilding: (buildingId, body) =>
+    apiClient.put(`/buildings/${buildingId}`, body).then((r) => r.data),
+
+  deleteBuilding: (buildingId) =>
+    apiClient.delete(`/buildings/${buildingId}`).then((r) => r.data),
+
+  // Floors
+  createFloor: (buildingId, body) =>
+    apiClient.post(`/buildings/${buildingId}/floors`, body).then((r) => r.data),
+
+  deleteFloor: (buildingId, floorId) =>
+    apiClient.delete(`/buildings/${buildingId}/floors/${floorId}`).then((r) => r.data),
 
   // Rooms
   getRooms: (params = {}) =>
@@ -109,6 +138,15 @@ export const api = {
 
   getRoomAvailability: (roomId, date) =>
     apiClient.get(`/rooms/${roomId}/availability`, { params: { date } }).then((r) => r.data),
+
+  createRoom: (body) =>
+    apiClient.post("/rooms", body).then((r) => r.data),
+
+  updateRoom: (roomId, body) =>
+    apiClient.put(`/rooms/${roomId}`, body).then((r) => r.data),
+
+  deleteRoom: (roomId) =>
+    apiClient.delete(`/rooms/${roomId}`).then((r) => r.data),
 
   // Bookings
   getBookings: (params = {}) =>
@@ -122,6 +160,39 @@ export const api = {
 
   cancelBooking: (bookingId) =>
     apiClient.patch(`/bookings/${bookingId}/cancel`).then((r) => r.data),
+
+  // Cameras
+  getCameras: (params = {}) =>
+    apiClient.get("/cameras", { params }).then((r) => r.data),
+
+  createCamera: (body) =>
+    apiClient.post("/cameras", body).then((r) => r.data),
+
+  updateCamera: (cameraId, body) =>
+    apiClient.put(`/cameras/${cameraId}`, body).then((r) => r.data),
+
+  deleteCamera: (cameraId) =>
+    apiClient.delete(`/cameras/${cameraId}`).then((r) => r.data),
+
+  getCameraEvents: (cameraId, params = {}) =>
+    apiClient.get(`/cameras/${cameraId}/events`, { params }).then((r) => r.data),
+
+  // Access Rules
+  getAccessRules: (params = {}) =>
+    apiClient.get("/access-rules", { params }).then((r) => r.data),
+
+  createAccessRule: (body) =>
+    apiClient.post("/access-rules", body).then((r) => r.data),
+
+  deleteAccessRule: (ruleId) =>
+    apiClient.delete(`/access-rules/${ruleId}`).then((r) => r.data),
+
+  // Alerts
+  getAlerts: (params = {}) =>
+    apiClient.get("/alerts", { params }).then((r) => r.data),
+
+  acknowledgeAlert: (alertId) =>
+    apiClient.patch(`/alerts/${alertId}/acknowledge`).then((r) => r.data),
 
   // Analytics
   getUtilization: (params = {}) =>
@@ -153,6 +224,13 @@ export const api = {
 
   getDepartmentUsage: (params = {}) =>
     apiClient.get("/analytics/by-department", { params }).then((r) => r.data),
+
+  // Events
+  getEvents: (params = {}) =>
+    apiClient.get("/events", { params }).then((r) => r.data),
+
+  refreshEvents: () =>
+    apiClient.post("/events/refresh").then((r) => r.data),
 
   // AI
   aiSearch: (query) =>
