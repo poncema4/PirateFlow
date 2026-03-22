@@ -719,9 +719,9 @@ async def create_room(db, floor_id, name, room_type, capacity,
     room_id = f"rm_{uuid.uuid4().hex[:8]}"
     now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     await db.execute(
-        "INSERT INTO rooms VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO rooms (id, floor_id, name, room_type, capacity, hourly_rate, is_bookable, status, description) VALUES (?,?,?,?,?,?,?,?,?)",
         (room_id, floor_id, name, room_type, capacity,
-         "available", hourly_rate, int(is_bookable), description),
+         hourly_rate, int(is_bookable), "available", description),
     )
     # Add equipment
     if equipment:
