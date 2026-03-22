@@ -739,6 +739,7 @@ a { color: inherit; text-decoration: none; }
 }
 .admin-input:focus { border-color: var(--accent); }
 .admin-form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 8px; }
+.admin-field-label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
 .admin-error {
   background: rgba(220,38,38,0.08); border: 1px solid var(--danger); border-radius: var(--radius);
   padding: 10px 14px; color: var(--danger); margin-bottom: 12px; font-size: 13px;

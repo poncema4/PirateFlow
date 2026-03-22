@@ -37,33 +37,45 @@ function BuildingForm({ initial, onSave, onCancel, saving }) {
   return (
     <div className="admin-card">
       <div className="admin-form-row">
-        <input
-          className="admin-input"
-          placeholder="Building name"
-          value={f.name}
-          onChange={(e) => set("name", e.target.value)}
-        />
-        <input
-          className="admin-input"
-          placeholder="Code (e.g. SHU)"
-          value={f.code}
-          onChange={(e) => set("code", e.target.value)}
-        />
-        <input
-          className="admin-input"
-          placeholder="Address"
-          value={f.address}
-          onChange={(e) => set("address", e.target.value)}
-        />
-        {!initial && (
+        <label className="admin-field-label">
+          Building Name
           <input
             className="admin-input"
-            placeholder="Floors"
-            type="number"
-            min={1}
-            value={f.total_floors}
-            onChange={(e) => set("total_floors", Number(e.target.value))}
+            placeholder="e.g. Jubilee Hall"
+            value={f.name}
+            onChange={(e) => set("name", e.target.value)}
           />
+        </label>
+        <label className="admin-field-label">
+          Code
+          <input
+            className="admin-input"
+            placeholder="e.g. JUB"
+            value={f.code}
+            onChange={(e) => set("code", e.target.value)}
+          />
+        </label>
+        <label className="admin-field-label">
+          Address
+          <input
+            className="admin-input"
+            placeholder="e.g. 400 South Orange Ave"
+            value={f.address}
+            onChange={(e) => set("address", e.target.value)}
+          />
+        </label>
+        {!initial && (
+          <label className="admin-field-label">
+            Floors
+            <input
+              className="admin-input"
+              placeholder="1"
+              type="number"
+              min={1}
+              value={f.total_floors}
+              onChange={(e) => set("total_floors", Number(e.target.value))}
+            />
+          </label>
         )}
         <button
           className="btn btn-primary btn-sm"
@@ -86,20 +98,26 @@ function FloorForm({ onSave, onCancel, saving }) {
 
   return (
     <div className="admin-form-row">
-      <input
-        className="admin-input"
-        placeholder="Floor #"
-        type="number"
-        min={0}
-        value={f.floor_number}
-        onChange={(e) => set("floor_number", Number(e.target.value))}
-      />
-      <input
-        className="admin-input"
-        placeholder="Floor name (e.g. Ground Floor)"
-        value={f.name}
-        onChange={(e) => set("name", e.target.value)}
-      />
+      <label className="admin-field-label">
+        Floor #
+        <input
+          className="admin-input"
+          placeholder="1"
+          type="number"
+          min={0}
+          value={f.floor_number}
+          onChange={(e) => set("floor_number", Number(e.target.value))}
+        />
+      </label>
+      <label className="admin-field-label">
+        Floor Name
+        <input
+          className="admin-input"
+          placeholder="e.g. Ground Floor"
+          value={f.name}
+          onChange={(e) => set("name", e.target.value)}
+        />
+      </label>
       <button
         className="btn btn-primary btn-sm"
         disabled={saving || !f.name.trim()}
@@ -140,38 +158,50 @@ function RoomForm({ floorId, initial, onSave, onCancel, saving }) {
   return (
     <div className="admin-card">
       <div className="admin-form-row">
-        <input
-          className="admin-input"
-          placeholder="Room name"
-          value={f.name}
-          onChange={(e) => set("name", e.target.value)}
-        />
-        <select
-          className="form-select"
-          value={f.room_type}
-          onChange={(e) => set("room_type", e.target.value)}
-        >
-          {ROOM_TYPES.map((t) => (
-            <option key={t} value={t}>{label(t)}</option>
-          ))}
-        </select>
-        <input
-          className="admin-input"
-          placeholder="Capacity"
-          type="number"
-          min={1}
-          value={f.capacity}
-          onChange={(e) => set("capacity", Number(e.target.value))}
-        />
-        <input
-          className="admin-input"
-          placeholder="$/hr"
-          type="number"
-          min={0}
-          step={0.5}
-          value={f.hourly_rate}
-          onChange={(e) => set("hourly_rate", Number(e.target.value))}
-        />
+        <label className="admin-field-label">
+          Room Name
+          <input
+            className="admin-input"
+            placeholder="e.g. Room 101"
+            value={f.name}
+            onChange={(e) => set("name", e.target.value)}
+          />
+        </label>
+        <label className="admin-field-label">
+          Room Type
+          <select
+            className="form-select"
+            value={f.room_type}
+            onChange={(e) => set("room_type", e.target.value)}
+          >
+            {ROOM_TYPES.map((t) => (
+              <option key={t} value={t}>{label(t)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="admin-field-label">
+          Capacity
+          <input
+            className="admin-input"
+            placeholder="30"
+            type="number"
+            min={1}
+            value={f.capacity}
+            onChange={(e) => set("capacity", Number(e.target.value))}
+          />
+        </label>
+        <label className="admin-field-label">
+          Hourly Rate ($)
+          <input
+            className="admin-input"
+            placeholder="0"
+            type="number"
+            min={0}
+            step={0.5}
+            value={f.hourly_rate}
+            onChange={(e) => set("hourly_rate", Number(e.target.value))}
+          />
+        </label>
       </div>
       <div className="admin-form-row">
         <input
