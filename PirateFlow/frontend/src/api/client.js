@@ -17,7 +17,7 @@ export const tokenStorage = {
  
 // ─── Axios Instance ─────────────────────────────────────────────────────────
 const apiClient = axios.create({
-  baseURL: import.meta.env.PROD ? "https://api.pirateflow.net/api" : "/api",
+  baseURL: import.meta.env.PROD ? "https://pirateflow.net/api" : "/api",
   headers: { "Content-Type": "application/json" },
 });
  
