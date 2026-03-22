@@ -99,7 +99,7 @@ export default function BuildingDetail() {
     try {
       const [buildingData, roomsData] = await Promise.all([
         api.getBuilding(buildingId),
-        api.getRooms({ building_id: buildingId }),
+        api.getRooms({ building_id: buildingId, page_size: 200 }),
       ]);
       setBuilding(buildingData.building);
       const filtered = roomsData.items.filter((r) => r.building_name === buildingData.building.name);

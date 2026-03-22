@@ -174,7 +174,7 @@ export default function CreateBooking() {
   // ── Load room list (when no pre-selection) ─────────────────────────────────
   useEffect(() => {
     if (!initialRoomId) {
-      api.getRooms().then((d) => setAllRooms(d.items || [])).finally(() => setRoomsLoading(false));
+      api.getRooms({ page_size: 200 }).then((d) => setAllRooms(d.items || [])).finally(() => setRoomsLoading(false));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

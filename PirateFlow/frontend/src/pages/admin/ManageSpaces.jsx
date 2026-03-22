@@ -269,7 +269,7 @@ export default function ManageSpaces() {
     try {
       const [detail, roomsData] = await Promise.all([
         api.getBuilding(buildingId),
-        api.getRooms({ building_id: buildingId }),
+        api.getRooms({ building_id: buildingId, page_size: 200 }),
       ]);
       const floors = detail.floors || [];
       const rooms = roomsData.items || roomsData || [];

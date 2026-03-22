@@ -107,7 +107,7 @@ export default function Landing() {
   const filters = ["All", ...new Set(Object.values(ROOM_TYPE_LABELS))];
 
   useEffect(() => {
-    api.getRooms({})
+    api.getRooms({ page_size: 200 })
       .then((data) => setRooms(data.items || []))
       .catch(() => {})
       .finally(() => setLoading(false));
