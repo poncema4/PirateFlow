@@ -138,6 +138,59 @@ async def seed_database():
     print(f"  Seeded {len(buildings)} buildings, {len(rooms)} rooms")
 
 
+async def fix_room_types():
+    """Fix room types for auto-created rooms based on their building."""
+    db = await get_db()
+    type_map = {
+        "A&S": "classroom",
+        "MCN": "science_lab",
+        "FAH": "classroom",
+        "SCH": "classroom",
+        "COR": "classroom",
+        "JUB": "classroom",
+        "BOL": "classroom",
+        "XAV": "classroom",
+        "MOO": "classroom",
+        "STA": "classroom",
+        "BAY": "classroom",
+        "PRE": "classroom",
+        "AQU": "classroom",
+        "SER": "classroom",
+        "WLB": "study_room",
+        "UC":  "multipurpose",
+        "CHP": "event_space",
+        "REC": "event_space",
+    }
+    updated = 0
+    for code, rtype in type_map.items():
+        cursor = await db.execute("""
+            UPDATE rooms SET room_type = ?
+            WHERE room_type = 'multipurpose'
+              AND floor_id IN (
+                SELECT f.id FROM floors f
+                JOIN buildings b ON f.building_id = b.id
+                WHERE b.code = ?
+              )
+        """, (rtype, code))
+        updated += cursor.rowcount
+
+    # Special case: Walsh Library Solutions Studio
+    cursor = await db.execute("""
+        UPDATE rooms SET room_type = 'maker_space'
+        WHERE LOWER(name) LIKE '%solution%'
+          AND floor_id IN (
+            SELECT f.id FROM floors f
+            JOIN buildings b ON f.building_id = b.id
+            WHERE b.code = 'WLB'
+          )
+    """)
+    updated += cursor.rowcount
+
+    await db.commit()
+    if updated:
+        print(f"  Fixed {updated} room types based on building")
+
+
 async def sync_passwords():
     """Ensure all users have the shared password (hackathon demo)."""
     db = await get_db()

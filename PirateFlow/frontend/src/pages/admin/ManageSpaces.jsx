@@ -11,6 +11,7 @@ const ROOM_TYPES = [
   "conference_room",
   "event_space",
   "multipurpose",
+  "maker_space",
 ];
 
 const EQUIPMENT_OPTIONS = [

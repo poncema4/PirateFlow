@@ -24,12 +24,13 @@ STATIC_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from services.database import init_db, close_db
-    from services.seed import seed_database, sync_passwords
+    from services.seed import seed_database, sync_passwords, fix_room_types
 
     print("PirateFlow API starting up...")
     await init_db()
     await seed_database()
     await sync_passwords()
+    await fix_room_types()
 
     # Load enrolled faces from DB for face recognition
     try:

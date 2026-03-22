@@ -49,6 +49,28 @@ LOCATION_PATTERNS = {
     r"mooney":                      ("MOO", "Mooney Hall"),
 }
 
+# Default room type per building code
+BUILDING_ROOM_TYPES = {
+    "A&S": "classroom",
+    "MCN": "science_lab",
+    "FAH": "classroom",
+    "SCH": "classroom",
+    "COR": "classroom",
+    "JUB": "classroom",
+    "BOL": "classroom",
+    "XAV": "classroom",
+    "MOO": "classroom",
+    "STA": "classroom",
+    "BAY": "classroom",
+    "PRE": "classroom",
+    "AQU": "classroom",
+    "SER": "classroom",
+    "WLB": "study_room",
+    "UC":  "multipurpose",
+    "CHP": "event_space",
+    "REC": "event_space",
+}
+
 
 # ---------------------------------------------------------------------------
 # Core scraping
@@ -301,9 +323,13 @@ async def _auto_match_locations() -> int:
 
                     room_id = f"rm_{uuid.uuid4().hex[:8]}"
                     room_name = f"Room {room_num}"
+                    room_type = BUILDING_ROOM_TYPES.get(matched_code or "", "multipurpose")
+                    # Special case: Walsh Library Solutions Studio
+                    if matched_code == "WLB" and "solution" in event["location"].lower():
+                        room_type = "maker_space"
                     await db.execute(
                         "INSERT INTO rooms VALUES (?,?,?,?,?,NULL,1,'available',NULL)",
-                        (room_id, floor_id, room_name, "multipurpose", 30),
+                        (room_id, floor_id, room_name, room_type, 30),
                     )
                     rooms.append({"id": room_id, "name": room_name, "building_id": building_id, "building_code": matched_code or ""})
                     created_rooms += 1

@@ -28,6 +28,7 @@ class RoomType(str, Enum):
     conference_room = "conference_room"
     event_space = "event_space"
     multipurpose = "multipurpose"
+    maker_space = "maker_space"
 
 
 class RoomStatus(str, Enum):

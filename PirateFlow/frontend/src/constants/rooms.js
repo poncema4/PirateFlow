@@ -10,6 +10,7 @@ export const ROOM_TYPE_LABELS = {
   event_space: "Event Space",
   multipurpose: "Multipurpose",
   classroom: "Classroom",
+  maker_space: "Maker Space",
 };
 
 export const EQUIPMENT_ICONS = {

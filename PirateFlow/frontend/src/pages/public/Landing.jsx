@@ -103,8 +103,10 @@ export default function Landing() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
+  const [buildingFilter, setBuildingFilter] = useState("All");
 
   const filters = ["All", ...new Set(Object.values(ROOM_TYPE_LABELS))];
+  const buildingNames = ["All", ...new Set(rooms.map((r) => r.building_name).filter(Boolean).sort())];
 
   useEffect(() => {
     api.getRooms({ page_size: 200 })
@@ -117,6 +119,9 @@ export default function Landing() {
     if (filter !== "All") {
       const label = ROOM_TYPE_LABELS[r.room_type] || r.room_type;
       if (label !== filter) return false;
+    }
+    if (buildingFilter !== "All") {
+      if (r.building_name !== buildingFilter) return false;
     }
     if (search) {
       const q = search.toLowerCase();
@@ -202,7 +207,7 @@ export default function Landing() {
           {/* Divider */}
           <div className="landing-divider" />
 
-          {/* Filter pills */}
+          {/* Room type filter pills */}
           <div className="landing-filters">
             {filters.map((f) => (
               <button
@@ -210,10 +215,28 @@ export default function Landing() {
                 onClick={() => setFilter(f)}
                 className={`landing-filter-btn${filter === f ? " active" : ""}`}
               >
-                {f === "All" ? "All Spaces" : f}
+                {f === "All" ? "All Types" : f}
               </button>
             ))}
           </div>
+
+          {/* Building filter pills */}
+          {buildingNames.length > 2 && (
+            <>
+              <div className="landing-divider" />
+              <div className="landing-filters">
+                {buildingNames.map((b) => (
+                  <button
+                    key={b}
+                    onClick={() => setBuildingFilter(b)}
+                    className={`landing-filter-btn${buildingFilter === b ? " active" : ""}`}
+                  >
+                    {b === "All" ? "All Buildings" : b}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Results count */}
@@ -222,6 +245,7 @@ export default function Landing() {
             <p>
               Showing <span>{visible.length}</span> {visible.length === 1 ? "space" : "spaces"}
               {filter !== "All" && <> in <span>{filter}</span></>}
+              {buildingFilter !== "All" && <> in <span>{buildingFilter}</span></>}
               {search && <> matching &ldquo;<span>{search}</span>&rdquo;</>}
             </p>
           </div>
@@ -243,7 +267,7 @@ export default function Landing() {
             <h3>No spaces found</h3>
             <p>Try adjusting your filters or search terms.</p>
             <button
-              onClick={() => { setSearch(""); setFilter("All"); }}
+              onClick={() => { setSearch(""); setFilter("All"); setBuildingFilter("All"); }}
               className="btn-primary"
             >
               Clear all filters
