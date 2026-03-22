@@ -92,36 +92,51 @@ export default function Dashboard() {
   const highOccupancy = buildings.filter((b) => b.current_occupancy_pct > 75).length;
 
   return (
-    <div className="p-4 flex flex-col gap-4" style={{ minHeight: "100vh" }}>
+    <div className="p-6 flex flex-col gap-6" style={{ minHeight: "100vh" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>
+          <h1 style={{
+            fontSize: 24,
+            fontWeight: 800,
+            fontFamily: "var(--font-display)",
+            color: "var(--text-primary)",
+            letterSpacing: "-0.02em",
+          }}>
             Admin Dashboard
           </h1>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
             Welcome back, {user?.name || "Admin"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+          style={{
+            background: ws?.connected ? "rgba(45,106,74,.08)" : "rgba(139,42,42,.08)",
+            border: `1px solid ${ws?.connected ? "rgba(45,106,74,.2)" : "rgba(139,42,42,.2)"}`,
+          }}
+        >
           <span
             className="inline-block rounded-full"
             style={{ width: 7, height: 7, background: ws?.connected ? "var(--success)" : "var(--danger)" }}
           />
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          <span style={{ fontSize: 12, color: ws?.connected ? "var(--success)" : "var(--danger)", fontWeight: 500 }}>
             {ws?.connected ? "Live" : "Offline"}
           </span>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-lg px-3 py-2" style={{ background: "var(--danger)22", border: "1px solid var(--danger)44", color: "var(--danger)", fontSize: 12 }}>
+        <div
+          className="rounded-lg px-4 py-3"
+          style={{ background: "rgba(139,42,42,.08)", border: "1px solid rgba(139,42,42,.2)", color: "var(--danger)", fontSize: 13 }}
+        >
           {error}
         </div>
       )}
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)
         ) : (
@@ -135,20 +150,26 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1">
         {/* Building Grid */}
         <div className="lg:col-span-2">
-          <p className="mb-2" style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>
+          <p style={{
+            fontWeight: 700,
+            fontSize: 15,
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-display)",
+            marginBottom: 12,
+          }}>
             Building Status
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {loading
               ? Array.from({ length: 6 }).map((_, i) => <BuildingCardSkeleton key={i} />)
               : buildings.map((b) => (
                   <BuildingCard key={b.id} building={b} onClick={() => navigate(`/buildings/${b.id}`)} />
                 ))}
             {!loading && buildings.length === 0 && (
-              <p className="col-span-full py-8 text-center" style={{ color: "var(--text-muted)", fontSize: 12 }}>
+              <p className="col-span-full py-10 text-center" style={{ color: "var(--text-muted)", fontSize: 13 }}>
                 No buildings found
               </p>
             )}
