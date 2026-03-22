@@ -450,8 +450,7 @@ export default function ManageSpaces() {
             <div className="admin-card-header" onClick={() => toggleExpand(b.id)}>
               <div>
                 <div className="admin-card-title">
-                  {isExpanded ? "\u25BC" : "\u25B6"} {b.name}
-                  <span className="badge-muted">{b.code}</span>
+                  {isExpanded ? "\u25BC" : "\u25B6"} {b.name} <span className="badge-muted" style={{ marginLeft: 8 }}>{b.code}</span>
                 </div>
                 <div className="admin-card-meta">
                   {b.address || "No address"} &middot; {b.total_floors ?? "?"} floor(s) &middot; {b.room_count ?? 0} room(s)
@@ -526,8 +525,7 @@ export default function ManageSpaces() {
                       <div key={floor.id} className="admin-card">
                         <div className="admin-card-header">
                           <span className="admin-card-title">
-                            Floor {floor.floor_number} &mdash; {floor.name}
-                            <span className="badge-muted">{floorRooms.length} room(s)</span>
+                            Floor {floor.floor_number} &mdash; {floor.name} <span className="badge-muted" style={{ marginLeft: 8 }}>{floorRooms.length} room(s)</span>
                           </span>
                           <div className="admin-page-controls">
                             <button
@@ -577,9 +575,9 @@ export default function ManageSpaces() {
                               <div className="admin-card-header">
                                 <div>
                                   <span className="admin-card-title">{room.name}</span>
-                                  <span className="badge-muted">{label(room.room_type || "unknown")}</span>
+                                  <span className="badge-muted" style={{ marginLeft: 8, marginRight: 8 }}>{label(room.room_type || "unknown")}</span>
                                   <span className="admin-card-meta">
-                                    Cap: {room.capacity} &middot; ${room.hourly_rate ?? 0}/hr
+                                    Cap: {room.capacity} · ${room.hourly_rate ?? 0}/hr
                                   </span>
                                 </div>
                                 <div className="admin-page-controls">
