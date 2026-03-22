@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useWebSocket } from "../../context/WebSocketContext";
 import { useAuth } from "../../hooks/useAuth";
+import apiClient from "../../api/client";
 
 const pageTitles = {
   "/dashboard": "Dashboard",
@@ -13,8 +14,19 @@ const pageTitles = {
 
 export default function Header({ alertCount = 0 }) {
   const location = useLocation();
-  const { connected } = useWebSocket();
   const { user, logout } = useAuth();
+  const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    const check = () => {
+      apiClient.get("/buildings")
+        .then(() => setOnline(true))
+        .catch(() => setOnline(false));
+    };
+    check();
+    const id = setInterval(check, 30000);
+    return () => clearInterval(id);
+  }, []);
   const navigate = useNavigate();
 
   const buildingMatch = location.pathname.match(/^\/spaces\/(.+)/);
@@ -34,10 +46,10 @@ export default function Header({ alertCount = 0 }) {
 
       <div className="header-actions">
         {/* Live indicator */}
-        <div className={`header-live-badge ${connected ? "online" : "offline"}`}>
-          <span className={`header-live-dot ${connected ? "online" : "offline"}`} />
-          <span className={`header-live-text ${connected ? "online" : "offline"}`}>
-            {connected ? "Live" : "Offline"}
+        <div className={`header-live-badge ${online ? "online" : "offline"}`}>
+          <span className={`header-live-dot ${online ? "online" : "offline"}`} />
+          <span className={`header-live-text ${online ? "online" : "offline"}`}>
+            {online ? "Online" : "Offline"}
           </span>
         </div>
 
