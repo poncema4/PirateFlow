@@ -1,13 +1,13 @@
 function getStatusColor(pct) {
-  if (pct > 75) return "#c0392b";
-  if (pct > 40) return "#d4881a";
-  return "#22875a";
+  if (pct > 75) return "#dc2626";
+  if (pct > 40) return "#ea580c";
+  return "#16a34a";
 }
 
 function getStatusGradient(pct) {
-  if (pct > 75) return "linear-gradient(135deg, #e74c3c, #c0392b)";
-  if (pct > 40) return "linear-gradient(135deg, #f0a030, #d4881a)";
-  return "linear-gradient(135deg, #2ecc71, #22875a)";
+  if (pct > 75) return "linear-gradient(135deg, #ef4444, #dc2626)";
+  if (pct > 40) return "linear-gradient(135deg, #f97316, #ea580c)";
+  return "linear-gradient(135deg, #22c55e, #16a34a)";
 }
 
 function getStatusLabel(pct) {
@@ -24,34 +24,13 @@ export default function BuildingCard({ building, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="rounded-2xl p-5 flex flex-col gap-4 cursor-pointer transition-all duration-200"
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow)",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = color;
-        e.currentTarget.style.boxShadow = "var(--shadow-md)";
-        e.currentTarget.style.transform = "translateY(-3px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.boxShadow = "var(--shadow)";
-        e.currentTarget.style.transform = "";
-      }}
+      className="building-card"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
+      <div className="building-card-header">
+        <div className="building-card-info">
           <div
-            className="rounded-xl flex items-center justify-center mt-0.5"
-            style={{
-              width: 40,
-              height: 40,
-              background: `${color}10`,
-              color: color,
-              flexShrink: 0,
-            }}
+            className="building-card-icon"
+            style={{ background: `${color}10`, color: color }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="2" width="16" height="20" rx="2"/>
@@ -65,22 +44,16 @@ export default function BuildingCard({ building, onClick }) {
             </svg>
           </div>
           <div>
-            <p style={{
-              fontWeight: 700,
-              fontSize: 15.5,
-              color: "var(--text-primary)",
-              fontFamily: "var(--font-display)",
-              lineHeight: 1.3,
-            }}>
+            <p className="building-card-name">
               {building.name}
             </p>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 3 }}>
+            <p className="building-card-meta">
               {building.code} &middot; {building.room_count} rooms
             </p>
           </div>
         </div>
         <span
-          className="text-xs px-3 py-1.5 rounded-full font-bold"
+          className="building-card-status"
           style={{
             background: `${color}12`,
             color,
@@ -91,24 +64,22 @@ export default function BuildingCard({ building, onClick }) {
         </span>
       </div>
 
-      <div>
-        <div className="flex justify-between mb-2">
-          <span style={{ fontSize: 12.5, color: "var(--text-muted)", fontWeight: 500 }}>Occupancy</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color }}>{building.current_occupancy_pct}%</span>
-        </div>
-        <div className="rounded-full overflow-hidden" style={{ height: 8, background: `${color}10` }}>
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${Math.max(building.current_occupancy_pct, 2)}%`,
-              background: gradient,
-              boxShadow: building.current_occupancy_pct > 0 ? `0 2px 8px ${color}40` : "none",
-            }}
-          />
-        </div>
+      <div className="building-card-occupancy">
+        <span className="building-card-occ-label">Occupancy</span>
+        <span className="building-card-occ-value" style={{ color }}>{building.current_occupancy_pct}%</span>
+      </div>
+      <div className="building-card-bar" style={{ background: `${color}10` }}>
+        <div
+          className="building-card-bar-fill"
+          style={{
+            width: `${Math.max(building.current_occupancy_pct, 2)}%`,
+            background: gradient,
+            boxShadow: building.current_occupancy_pct > 0 ? `0 2px 8px ${color}40` : "none",
+          }}
+        />
       </div>
 
-      <p style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+      <p className="building-card-rooms">
         <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{building.occupied_rooms || 0}</span> of {building.room_count} rooms occupied
       </p>
     </div>

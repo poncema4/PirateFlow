@@ -8,8 +8,8 @@ function timeAgo(timestamp) {
 
 const typeConfig = {
   occupancy: {
-    color: "#004B8D",
-    bg: "rgba(0,75,141,.08)",
+    color: "#2563eb",
+    bg: "rgba(37,99,235,.08)",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -18,8 +18,8 @@ const typeConfig = {
     ),
   },
   booking: {
-    color: "#22875a",
-    bg: "rgba(34,135,90,.08)",
+    color: "#16a34a",
+    bg: "rgba(22,163,74,.08)",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -30,8 +30,8 @@ const typeConfig = {
     ),
   },
   anomaly: {
-    color: "#c0392b",
-    bg: "rgba(192,57,43,.08)",
+    color: "#dc2626",
+    bg: "rgba(220,38,38,.08)",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -44,59 +44,22 @@ const typeConfig = {
 
 export default function ActivityFeed({ items = [] }) {
   return (
-    <div
-      className="rounded-2xl flex flex-col"
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        height: "100%",
-        maxHeight: 520,
-        boxShadow: "var(--shadow)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        className="px-5 py-4 flex items-center gap-2.5"
-        style={{
-          borderBottom: "1px solid var(--border)",
-          background: "linear-gradient(135deg, rgba(0,75,141,.03), rgba(0,75,141,.01))",
-        }}
-      >
-        <div
-          className="rounded-lg flex items-center justify-center"
-          style={{
-            width: 30,
-            height: 30,
-            background: "rgba(0,75,141,.08)",
-            color: "#004B8D",
-          }}
-        >
+    <div className="activity-feed">
+      <div className="activity-feed-header">
+        <div className="activity-feed-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
         </div>
-        <p style={{
-          fontWeight: 700,
-          fontSize: 15,
-          color: "var(--text-primary)",
-          fontFamily: "var(--font-display)",
-        }}>
+        <p className="activity-feed-title">
           Live Activity
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="activity-feed-list">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6" style={{ color: "var(--text-muted)" }}>
-            <div
-              className="rounded-2xl flex items-center justify-center mb-4"
-              style={{
-                width: 56,
-                height: 56,
-                background: "rgba(0,75,141,.05)",
-                color: "rgba(0,75,141,.25)",
-              }}
-            >
+          <div className="activity-feed-empty">
+            <div className="activity-feed-empty-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
@@ -112,33 +75,19 @@ export default function ActivityFeed({ items = [] }) {
             return (
               <div
                 key={item.id}
-                className="flex gap-3 px-5 py-3.5 transition-colors duration-150"
-                style={{ borderBottom: "1px solid rgba(0,0,0,.04)" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(0,75,141,.02)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                className="activity-feed-item"
               >
                 <div
-                  className="rounded-lg flex items-center justify-center mt-0.5"
-                  style={{
-                    width: 30,
-                    height: 30,
-                    background: config.bg,
-                    color: config.color,
-                    flexShrink: 0,
-                  }}
+                  className="activity-feed-item-icon"
+                  style={{ background: config.bg, color: config.color }}
                 >
                   {config.icon}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p style={{
-                    fontSize: 13,
-                    color: "var(--text-primary)",
-                    lineHeight: 1.5,
-                    fontWeight: 500,
-                  }}>
+                <div className="activity-feed-item-content">
+                  <p className="activity-feed-item-msg">
                     {item.message}
                   </p>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3 }}>
+                  <p className="activity-feed-item-time">
                     {timeAgo(item.timestamp)}
                   </p>
                 </div>

@@ -44,71 +44,40 @@ export default function StatsCard({ label, value, sub, accent = false, danger = 
   const trendArrow = trend?.direction === "up" ? "\u2191" : "\u2193";
 
   const colorMap = {
-    default: { bg: "rgba(0,75,141,.06)", border: "rgba(0,75,141,.1)", icon: "#004B8D", topBorder: "transparent" },
-    accent: { bg: "rgba(0,75,141,.06)", border: "rgba(0,75,141,.1)", icon: "#004B8D", topBorder: "#004B8D" },
-    danger: { bg: "rgba(192,57,43,.06)", border: "rgba(192,57,43,.1)", icon: "#c0392b", topBorder: "#c0392b" },
+    default: { bg: "rgba(37,99,235,.08)", border: "rgba(37,99,235,.1)", icon: "#2563eb", topBorder: "transparent" },
+    accent: { bg: "rgba(37,99,235,.08)", border: "rgba(37,99,235,.1)", icon: "#2563eb", topBorder: "#2563eb" },
+    danger: { bg: "rgba(220,38,38,.08)", border: "rgba(220,38,38,.1)", icon: "#dc2626", topBorder: "#dc2626" },
   };
   const colors = danger ? colorMap.danger : accent ? colorMap.accent : colorMap.default;
   const valueColor = danger ? "var(--danger)" : accent ? "var(--accent)" : "var(--text-primary)";
 
   return (
     <div
-      className="rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200"
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow)",
-        borderTop: `3px solid ${colors.topBorder}`,
-        position: "relative",
-        overflow: "hidden",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "var(--shadow-md)";
-        e.currentTarget.style.transform = "translateY(-2px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "var(--shadow)";
-        e.currentTarget.style.transform = "";
-      }}
+      className="stats-card"
+      style={{ borderTop: `3px solid ${colors.topBorder}` }}
     >
-      <div className="flex items-start justify-between">
-        <p style={{
-          fontSize: 11.5,
-          color: "var(--text-muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          fontWeight: 600,
-        }}>
+      <div className="stats-card-top">
+        <p className="stats-card-label">
           {label}
         </p>
         <div
-          className="rounded-xl flex items-center justify-center"
-          style={{
-            width: 38,
-            height: 38,
-            background: colors.bg,
-            color: colors.icon,
-          }}
+          className="stats-card-icon"
+          style={{ background: colors.bg, color: colors.icon }}
         >
           <StatsIcon type={icon || "buildings"} />
         </div>
       </div>
 
-      <div className="flex items-end justify-between gap-2">
+      <div className="stats-card-bottom">
         <p
-          style={{
-            fontSize: 34,
-            fontWeight: 800,
-            fontFamily: "var(--font-display)",
-            color: valueColor,
-            lineHeight: 1,
-          }}
+          className="stats-card-value"
+          style={{ color: valueColor }}
         >
           {value}
         </p>
         {trend && (
           <span
-            className="text-xs font-bold px-2.5 py-1 rounded-full mb-1"
+            className="stats-card-trend"
             style={{ background: `${trendColor}15`, color: trendColor }}
           >
             {trendArrow} {trend.pct}%
@@ -116,7 +85,7 @@ export default function StatsCard({ label, value, sub, accent = false, danger = 
         )}
       </div>
       {sub && (
-        <p style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{sub}</p>
+        <p className="stats-card-sub">{sub}</p>
       )}
     </div>
   );
